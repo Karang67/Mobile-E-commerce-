@@ -1,0 +1,952 @@
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { 
+  CheckCircle2, 
+  MapPin, 
+  CreditCard, 
+  Clock, 
+  ChevronRight, 
+  ArrowLeft, 
+  QrCode,
+  Banknote,
+  Percent,
+  Printer,
+  ShoppingBag,
+  Store,
+  Truck,
+  Package,
+  ShieldCheck,
+  Building,
+  Home,
+  Check,
+  AlertCircle
+} from 'lucide-react';
+import confetti from 'canvas-confetti';
+import { useCart } from '../context/CartContext';
+import { useBrand } from '../context/BrandContext';
+import { Address, Order } from '../types';
+import { addAdminNotification } from '../utils/notificationService';
+import { useAuth } from '../context/AuthContext';
+import { syncOrderToMongo } from '../utils/apiService';
+
+export const CheckoutPage: React.FC = () => {
+  const { cart, subtotal, discount, total, clearCart } = useCart();
+  const { brandName } = useBrand();
+  const { user, isAuthenticated, openAuthModal } = useAuth();
+
+  // 3 Steps: 1: Delivery Address & Details, 2: Payment, 3: Confirmation & Tracking
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
+
+  // Fulfillment Type: Delivery vs Store Pickup
+  const [fulfillmentType, setFulfillmentType] = useState<'delivery' | 'pickup'>('delivery');
+
+  // Step 1: Customer & Delivery Address Form (Fully Editable)
+  const [customer, setCustomer] = useState(() => {
+    try {
+      const savedProfile = localStorage.getItem('shivangi_user_profile');
+      if (savedProfile) {
+        const p = JSON.parse(savedProfile);
+        if (p.fullName && p.fullName !== 'Customer') {
+          return {
+            fullName: p.fullName,
+            phone: p.phone ? p.phone.replace(/\D/g, '') : '',
+            email: p.email || '',
+            pincode: '518301',
+            city: p.city || 'Adoni',
+            state: 'Andhra Pradesh',
+            street: p.address || '',
+            landmark: '',
+            addressType: 'Home' as 'Home' | 'Work',
+            deliveryInstructions: '',
+          };
+        }
+      }
+      const savedAddrs = localStorage.getItem('shivangi_saved_addresses');
+      if (savedAddrs) {
+        const addrs = JSON.parse(savedAddrs);
+        if (addrs.length > 0) {
+          const a = addrs[0];
+          return {
+            fullName: a.fullName || '',
+            phone: a.phone ? a.phone.replace(/\D/g, '') : '',
+            email: '',
+            pincode: a.pincode || '518301',
+            city: a.city || 'Adoni',
+            state: a.state || 'Andhra Pradesh',
+            street: a.street || '',
+            landmark: a.landmark || '',
+            addressType: a.addressType || 'Home',
+            deliveryInstructions: '',
+          };
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return {
+      fullName: '',
+      phone: '',
+      email: '',
+      pincode: '518301',
+      city: 'Adoni',
+      state: 'Andhra Pradesh',
+      street: '',
+      landmark: '',
+      addressType: 'Home' as 'Home' | 'Work',
+      deliveryInstructions: '',
+    };
+  });
+
+  // Sync authenticated user's email into customer email
+  useEffect(() => {
+    if (user?.email && !customer.email) {
+      setCustomer(prev => ({ ...prev, email: user.email }));
+    }
+  }, [user]);
+
+  // Step 2: Payment Method
+  const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card' | 'cod' | 'netbanking'>('upi');
+  const [upiId, setUpiId] = useState('');
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvv, setCardCvv] = useState('');
+
+  // Step 3: Confirmed Order details
+  const [confirmedOrder, setConfirmedOrder] = useState<Order | null>(null);
+
+  const handleAddressSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isAuthenticated) {
+      openAuthModal(
+        'Please login or create an account with Email OTP to proceed with your order and save your address.',
+        () => setCurrentStep(2)
+      );
+      return;
+    }
+    setCurrentStep(2);
+  };
+
+  const handlePlaceOrder = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isAuthenticated) {
+      openAuthModal('Please login or create an account with Email OTP before confirming your order.');
+      return;
+    }
+    const orderId = 'SHIV-' + Math.floor(100000 + Math.random() * 900000);
+    
+    const addressObj: Address = {
+      fullName: customer.fullName,
+      phone: customer.phone,
+      pincode: customer.pincode || '518301',
+      state: customer.state || 'Andhra Pradesh',
+      city: customer.city || 'Adoni',
+      street: customer.street,
+      landmark: customer.landmark,
+      addressType: customer.addressType,
+    };
+
+    const paymentMethodLabel = 
+      paymentMethod === 'upi' ? 'Online UPI (GPay/PhonePe)' :
+      paymentMethod === 'card' ? 'Credit/Debit Card' :
+      paymentMethod === 'netbanking' ? 'Net Banking' : 'Cash on Delivery (COD)';
+
+    const isPrepaid = paymentMethod !== 'cod';
+
+    const newOrder: Order = {
+      id: orderId,
+      date: new Date().toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      }),
+      items: [...cart],
+      subtotal,
+      discount,
+      deliveryFee: 0,
+      total,
+      status: 'Order Placed',
+      paymentStatus: isPrepaid ? 'Verified' : 'COD',
+      address: addressObj,
+      paymentMethod: paymentMethodLabel,
+      fulfillmentType,
+      deliveryMethod: fulfillmentType === 'delivery' ? 'Doorstep Delivery' : 'In-Store Pickup (Adoni Store)',
+      estimatedDelivery: fulfillmentType === 'delivery' ? 'Estimated: Tomorrow, by 6:00 PM' : 'Ready Today at Adoni Store',
+      statusMessage: 'Your order has been placed. Our team will verify payment and prepare your order for packing & delivery.',
+    };
+
+    // Save order into customer orders in localStorage
+    try {
+      const existing = localStorage.getItem('shivangi_customer_orders');
+      const ordersList: Order[] = existing ? JSON.parse(existing) : [];
+      ordersList.unshift(newOrder);
+      localStorage.setItem('shivangi_customer_orders', JSON.stringify(ordersList));
+      window.dispatchEvent(new Event('shivangi_orders_updated'));
+    } catch (err) {
+      console.error('Failed to save order to localStorage', err);
+    }
+
+    // Sync order to MongoDB database if API backend is active
+    syncOrderToMongo(newOrder).catch(() => {});
+
+    // Trigger Admin Notification with complete customer info and payment details
+    try {
+      addAdminNotification({
+        inquiryId: orderId,
+        customerName: customer.fullName,
+        customerPhone: customer.phone,
+        customerEmail: customer.email,
+        city: `${customer.city}, ${customer.state}`,
+        streetAddress: `${customer.street}, ${customer.landmark ? 'Landmark: ' + customer.landmark + ', ' : ''}${customer.city} - ${customer.pincode}`,
+        pincode: customer.pincode,
+        fulfillmentType,
+        notes: customer.deliveryInstructions || undefined,
+        itemsSummary: cart.map(i => `${i.product.name} (x${i.quantity})`).join(', '),
+        itemsCount: cart.reduce((sum, i) => sum + i.quantity, 0),
+        total,
+        paymentMethod: paymentMethodLabel,
+        paymentStatus: isPrepaid ? 'Verified' : 'COD',
+        status: 'Order Placed',
+      });
+    } catch (err) {
+      console.error('Failed to send admin notification', err);
+    }
+
+    setConfirmedOrder(newOrder);
+    setCurrentStep(3);
+    clearCart();
+
+    // Trigger celebratory confetti
+    try {
+      confetti({
+        particleCount: 120,
+        spread: 70,
+        origin: { y: 0.6 },
+      });
+    } catch {
+      // Confetti fallback
+    }
+  };
+
+  if (cart.length === 0 && currentStep !== 3) {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center">
+        <div className="w-16 h-16 bg-red-50 text-[#E30613] rounded-full flex items-center justify-center mx-auto mb-4">
+          <ShoppingBag className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-900">Your cart is empty</h2>
+        <p className="text-xs text-gray-500 mt-2">Add items to your cart before proceeding to checkout.</p>
+        <Link
+          to="/"
+          className="mt-5 inline-block bg-[#E30613] text-white px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm hover:bg-[#c40510] transition-colors"
+        >
+          Return to Shop
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      {/* Checkout Progress Stepper */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between max-w-xl mx-auto relative">
+          {/* Connector Line */}
+          <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 bg-gray-200 -z-10" />
+          <div 
+            className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-[#E30613] -z-10 transition-all duration-300"
+            style={{ width: `${((currentStep - 1) / 2) * 100}%` }}
+          />
+
+          {/* Steps */}
+          {[
+            { num: 1, label: 'Delivery Address' },
+            { num: 2, label: 'Payment' },
+            { num: 3, label: 'Order Confirmed' },
+          ].map(s => {
+            const isCompleted = currentStep > s.num;
+            const isCurrent = currentStep === s.num;
+            return (
+              <div key={s.num} className="flex flex-col items-center bg-[#F8F8F8] px-3">
+                <div
+                  className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-colors shadow-sm ${
+                    isCompleted
+                      ? 'bg-emerald-600 text-white'
+                      : isCurrent
+                      ? 'bg-[#E30613] text-white ring-4 ring-red-100'
+                      : 'bg-white text-gray-400 border border-gray-300'
+                  }`}
+                >
+                  {isCompleted ? <CheckCircle2 className="w-5 h-5" /> : s.num}
+                </div>
+                <span
+                  className={`text-[11px] font-bold mt-1.5 uppercase tracking-wider ${
+                    isCurrent ? 'text-[#E30613]' : 'text-gray-500'
+                  }`}
+                >
+                  {s.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Main Form Area */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Left Column: Form Steps */}
+        <div className="lg:col-span-8">
+          {/* STEP 1: DELIVERY OPTION & EDITABLE ADDRESS */}
+          {currentStep === 1 && (
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs animate-fade-in space-y-6">
+              <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+                <div className="flex items-center gap-2.5">
+                  <Truck className="w-5 h-5 text-[#E30613]" />
+                  <h2 className="font-black text-gray-900 uppercase text-base">
+                    Step 1: Choose Delivery & Edit Address
+                  </h2>
+                </div>
+                <span className="text-[11px] bg-emerald-50 text-emerald-700 font-bold px-2.5 py-1 rounded-full">
+                  Free Shipping Guaranteed
+                </span>
+              </div>
+
+              {/* Auth Warning Gate */}
+              {!isAuthenticated && (
+                <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-900 shadow-sm animate-fade-in">
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold text-sm block">⚠️ Account Login Required to Order</span>
+                      <p className="text-amber-800 text-[11px] mt-0.5 leading-relaxed">
+                        Please verify your email via Supabase Email OTP to proceed with checkout and live package tracking.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openAuthModal('Please login or create an account with Email OTP to proceed with your order.')}
+                    className="bg-[#E30613] hover:bg-[#c40510] text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider shrink-0 transition-colors shadow-xs"
+                  >
+                    Sign In with OTP
+                  </button>
+                </div>
+              )}
+
+              {/* Delivery vs Store Pickup Tabs */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFulfillmentType('delivery')}
+                  className={`p-4 rounded-xl border-2 text-left transition-all flex items-start gap-3.5 ${
+                    fulfillmentType === 'delivery'
+                      ? 'border-[#E30613] bg-red-50/40 shadow-xs'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  }`}
+                >
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                    fulfillmentType === 'delivery' ? 'bg-[#E30613] text-white' : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    <Truck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-black text-sm text-gray-900">Doorstep Delivery</span>
+                      <span className="bg-emerald-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded">FREE</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Direct delivery to your home or office address. Real-time updates as your order is prepared, packed, and dispatched.
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFulfillmentType('pickup')}
+                  className={`p-4 rounded-xl border-2 text-left transition-all flex items-start gap-3.5 ${
+                    fulfillmentType === 'pickup'
+                      ? 'border-[#E30613] bg-red-50/40 shadow-xs'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  }`}
+                >
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                    fulfillmentType === 'pickup' ? 'bg-[#E30613] text-white' : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    <Store className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-black text-sm text-gray-900">In-Store Pickup</span>
+                      <span className="bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded">Instant</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Shivangi Mobile Showroom, Municipal Complex, Adoni. Inspect in person and unbox right away.
+                    </p>
+                  </div>
+                </button>
+              </div>
+
+              {/* Editable Address Form */}
+              <form onSubmit={handleAddressSubmit} className="space-y-4 text-xs">
+                <div className="flex items-center justify-between pt-2">
+                  <span className="font-bold text-gray-700 uppercase tracking-wider text-[11px]">
+                    {fulfillmentType === 'delivery' ? 'Enter Delivery Address Details' : 'Customer Contact Details'}
+                  </span>
+                  <span className="text-[11px] text-gray-500">* Required fields</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-gray-700 font-bold mb-1">Full Name *</label>
+                    <input
+                      type="text"
+                      value={customer.fullName}
+                      onChange={e => setCustomer({ ...customer, fullName: e.target.value })}
+                      placeholder="e.g. Shivangi Sharma"
+                      className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3.5 py-2.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#E30613]"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-700 font-bold mb-1">Mobile Number (For Delivery Tracking & OTP) *</label>
+                    <input
+                      type="tel"
+                      value={customer.phone}
+                      onChange={e => setCustomer({ ...customer, phone: e.target.value })}
+                      placeholder="10-digit mobile number"
+                      className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3.5 py-2.5 text-xs text-gray-900 font-mono focus:outline-none focus:ring-2 focus:ring-[#E30613]"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-gray-700 font-bold mb-1">Pincode *</label>
+                    <input
+                      type="text"
+                      value={customer.pincode}
+                      onChange={e => setCustomer({ ...customer, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) })}
+                      placeholder="e.g. 518301"
+                      className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3.5 py-2.5 text-xs text-gray-900 font-mono focus:outline-none focus:ring-2 focus:ring-[#E30613]"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-700 font-bold mb-1">City / Town *</label>
+                    <input
+                      type="text"
+                      value={customer.city}
+                      onChange={e => setCustomer({ ...customer, city: e.target.value })}
+                      placeholder="e.g. Adoni"
+                      className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3.5 py-2.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#E30613]"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-700 font-bold mb-1">State *</label>
+                    <input
+                      type="text"
+                      value={customer.state}
+                      onChange={e => setCustomer({ ...customer, state: e.target.value })}
+                      placeholder="e.g. Andhra Pradesh"
+                      className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3.5 py-2.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#E30613]"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-gray-700 font-bold mb-1">
+                    {fulfillmentType === 'delivery' ? 'House No., Building, Street Address *' : 'Address / Area *'}
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={customer.street}
+                    onChange={e => setCustomer({ ...customer, street: e.target.value })}
+                    placeholder="Enter complete street address for accurate delivery"
+                    className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3.5 py-2 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#E30613]"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-gray-700 font-bold mb-1">Landmark (Optional)</label>
+                    <input
+                      type="text"
+                      value={customer.landmark}
+                      onChange={e => setCustomer({ ...customer, landmark: e.target.value })}
+                      placeholder="e.g. Opposite State Bank, Near Clock Tower"
+                      className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3.5 py-2.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#E30613]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-700 font-bold mb-1">Email Address *</label>
+                    <input
+                      type="email"
+                      value={customer.email}
+                      onChange={e => setCustomer({ ...customer, email: e.target.value })}
+                      placeholder="For order receipts & dispatch tracking"
+                      className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3.5 py-2.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#E30613]"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Address Type & Delivery Instructions */}
+                <div className="flex flex-wrap items-center gap-4 pt-1">
+                  <span className="font-bold text-gray-700">Address Type:</span>
+                  <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="addressType"
+                      checked={customer.addressType === 'Home'}
+                      onChange={() => setCustomer({ ...customer, addressType: 'Home' })}
+                      className="text-[#E30613] focus:ring-[#E30613]"
+                    />
+                    <Home className="w-3.5 h-3.5 text-gray-500" />
+                    <span>Home (All day delivery)</span>
+                  </label>
+                  <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="addressType"
+                      checked={customer.addressType === 'Work'}
+                      onChange={() => setCustomer({ ...customer, addressType: 'Work' })}
+                      className="text-[#E30613] focus:ring-[#E30613]"
+                    />
+                    <Building className="w-3.5 h-3.5 text-gray-500" />
+                    <span>Work (10 AM - 6 PM delivery)</span>
+                  </label>
+                </div>
+
+                <div className="pt-3 flex justify-end">
+                  <button
+                    type="submit"
+                    className="bg-[#E30613] hover:bg-[#c40510] text-white px-8 py-3 rounded-xl font-bold uppercase tracking-wider transition-all shadow-md flex items-center gap-2"
+                  >
+                    <span>Proceed to Payment</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* STEP 2: PAYMENT METHOD */}
+          {currentStep === 2 && (
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs animate-fade-in space-y-5">
+              <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+                <div className="flex items-center gap-2.5">
+                  <CreditCard className="w-5 h-5 text-[#E30613]" />
+                  <h2 className="font-black text-gray-900 uppercase text-base">
+                    Step 2: Select Payment Method
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(1)}
+                  className="text-xs text-gray-500 hover:text-[#E30613] flex items-center gap-1 font-semibold"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" /> Edit Address
+                </button>
+              </div>
+
+              {/* Delivery Address Summary */}
+              <div className="bg-gray-50 p-3.5 rounded-xl border border-gray-200 text-xs flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <MapPin className="w-4 h-4 text-[#E30613] shrink-0" />
+                  <div className="truncate">
+                    <span className="font-bold text-gray-900">
+                      Delivering to {customer.fullName} ({customer.phone})
+                    </span>
+                    <p className="text-gray-500 text-[11px] truncate">
+                      {customer.street}, {customer.city} - {customer.pincode}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold uppercase bg-red-100 text-[#E30613] px-2 py-0.5 rounded shrink-0">
+                  {fulfillmentType === 'delivery' ? 'Home Delivery' : 'Store Pickup'}
+                </span>
+              </div>
+
+              {/* Payment Method Selection Options */}
+              <div className="space-y-3">
+                {/* Option 1: Instant Online UPI */}
+                <label
+                  className={`block border-2 rounded-xl p-4 cursor-pointer transition-all ${
+                    paymentMethod === 'upi'
+                      ? 'border-[#E30613] bg-red-50/40 shadow-xs'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      checked={paymentMethod === 'upi'}
+                      onChange={() => setPaymentMethod('upi')}
+                      className="mt-1 text-[#E30613] focus:ring-[#E30613]"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <QrCode className="w-4 h-4 text-[#0796D2]" />
+                        <span className="font-black text-gray-900 text-sm">
+                          UPI Payment (Google Pay / PhonePe / Paytm / BHIM)
+                        </span>
+                        <span className="bg-blue-100 text-[#0796D2] text-[10px] font-black px-2 py-0.5 rounded uppercase">
+                          Instant Verification
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Zero transaction charges. Admin receives immediate automated payment verification to prioritize packing.
+                      </p>
+                    </div>
+                  </div>
+                </label>
+
+                {/* Option 2: Credit / Debit Card */}
+                <label
+                  className={`block border-2 rounded-xl p-4 cursor-pointer transition-all ${
+                    paymentMethod === 'card'
+                      ? 'border-[#E30613] bg-red-50/40 shadow-xs'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      checked={paymentMethod === 'card'}
+                      onChange={() => setPaymentMethod('card')}
+                      className="mt-1 text-[#E30613] focus:ring-[#E30613]"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="w-4 h-4 text-purple-600" />
+                        <span className="font-black text-gray-900 text-sm">
+                          Credit / Debit Card (Visa, Mastercard, RuPay)
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Secure 256-bit encrypted checkout with bank discount eligibility.
+                      </p>
+                    </div>
+                  </div>
+                </label>
+
+                {/* Option 3: Cash on Delivery (COD) */}
+                <label
+                  className={`block border-2 rounded-xl p-4 cursor-pointer transition-all ${
+                    paymentMethod === 'cod'
+                      ? 'border-[#E30613] bg-red-50/40 shadow-xs'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      checked={paymentMethod === 'cod'}
+                      onChange={() => setPaymentMethod('cod')}
+                      className="mt-1 text-[#E30613] focus:ring-[#E30613]"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <Banknote className="w-4 h-4 text-emerald-600" />
+                        <span className="font-black text-gray-900 text-sm">
+                          Cash on Delivery (Pay upon arrival)
+                        </span>
+                        <span className="bg-emerald-600 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase">
+                          Available
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Pay with cash or UPI QR directly to the delivery executive when the parcel reaches your doorstep.
+                      </p>
+                    </div>
+                  </div>
+                </label>
+              </div>
+
+              {/* Dynamic Sub-form based on choice */}
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 text-xs">
+                {paymentMethod === 'upi' && (
+                  <div className="space-y-2">
+                    <span className="font-bold text-gray-800 block">Enter Your Virtual Payment Address (VPA) / UPI ID</span>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={upiId}
+                        onChange={e => setUpiId(e.target.value)}
+                        placeholder="yourname@okhdfcbank"
+                        className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono"
+                      />
+                      <button
+                        type="button"
+                        className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold shrink-0 hover:bg-emerald-700"
+                      >
+                        Verify UPI
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {paymentMethod === 'card' && (
+                  <div className="space-y-3">
+                    <span className="font-bold text-gray-800 block">Enter Card Details (Demo Mode)</span>
+                    <div>
+                      <label className="block text-gray-600 mb-1">Card Number</label>
+                      <input
+                        type="text"
+                        value={cardNumber}
+                        onChange={e => setCardNumber(e.target.value)}
+                        className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-gray-600 mb-1">Valid Thru (MM/YY)</label>
+                        <input
+                          type="text"
+                          value={cardExpiry}
+                          onChange={e => setCardExpiry(e.target.value)}
+                          className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-gray-600 mb-1">CVV</label>
+                        <input
+                          type="password"
+                          value={cardCvv}
+                          onChange={e => setCardCvv(e.target.value)}
+                          maxLength={4}
+                          className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {paymentMethod === 'cod' && (
+                  <div className="space-y-1 text-gray-700">
+                    <span className="font-bold text-gray-900 block">✓ Cash on Delivery Selected</span>
+                    <p className="text-[11px] leading-relaxed text-gray-600">
+                      Our delivery personnel will arrive with your sealed package. You can inspect the box seal and pay via cash or UPI QR on spot.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Submit Order CTA */}
+              <div className="pt-3 flex justify-between items-center">
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(1)}
+                  className="text-xs font-bold text-gray-600 hover:text-gray-900"
+                >
+                  ← Back to Address
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePlaceOrder}
+                  className="bg-[#E30613] hover:bg-[#c40510] text-white px-8 py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-lg flex items-center gap-2"
+                >
+                  <span>Pay ₹{total.toLocaleString('en-IN')} & Place Order</span>
+                  <CheckCircle2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3: ORDER CONFIRMED & LIVE TRACKING PROGRESS */}
+          {currentStep === 3 && confirmedOrder && (
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-md animate-fade-in text-center space-y-6">
+              <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto ring-8 ring-emerald-50">
+                <CheckCircle2 className="w-10 h-10" />
+              </div>
+
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-3.5 py-1 rounded-full border border-emerald-200">
+                  Order Successfully Placed!
+                </span>
+                <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight mt-2">
+                  Thank You for Your Order with {brandName}
+                </h2>
+                <p className="text-xs text-gray-500 mt-1">
+                  Order ID: <strong className="font-mono text-gray-900 text-sm bg-gray-100 px-2 py-0.5 rounded">{confirmedOrder.id}</strong> • Date: {confirmedOrder.date}
+                </p>
+              </div>
+
+              {/* Visual Order Lifecycle Stepper (The exact requested flow) */}
+              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 text-left space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase text-gray-900 tracking-wider">
+                    Order Delivery Status
+                  </span>
+                  <span className="text-[11px] font-bold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full">
+                    Stage 1: Order Placed
+                  </span>
+                </div>
+
+                {/* 4-Stage Stepper */}
+                <div className="grid grid-cols-4 gap-2 pt-2 text-center">
+                  {[
+                    { stage: 'Order Placed', desc: 'Received & Logged', active: true, done: true },
+                    { stage: 'Preparing', desc: 'Item allocated in store', active: false, done: false },
+                    { stage: 'Packed', desc: 'Packaged & Sealed', active: false, done: false },
+                    { stage: 'Out for Delivery', desc: 'Dispatched to address', active: false, done: false },
+                  ].map((s, idx) => (
+                    <div key={idx} className="space-y-1">
+                      <div className={`h-2 rounded-full ${s.done ? 'bg-emerald-500' : 'bg-gray-200'}`} />
+                      <p className={`text-[11px] font-black ${s.done ? 'text-emerald-700' : 'text-gray-400'}`}>
+                        {s.stage}
+                      </p>
+                      <p className="text-[9px] text-gray-400 hidden sm:block">{s.desc}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="p-3 bg-white rounded-xl border border-gray-200 text-xs text-gray-600 flex items-center gap-2.5">
+                  <Clock className="w-4 h-4 text-[#E30613] shrink-0" />
+                  <span>
+                    <strong>Next Step:</strong> Admin will verify payment success in the control panel, then advance your order to <strong>Preparing</strong>, <strong>Packed</strong>, and <strong>Out for Delivery</strong>.
+                  </span>
+                </div>
+              </div>
+
+              {/* Shipping Details Box */}
+              <div className="bg-red-50/50 border border-red-200 rounded-xl p-4 text-xs text-left max-w-md mx-auto space-y-1.5">
+                <div className="flex items-center gap-2 text-[#E30613] font-black uppercase tracking-wide">
+                  <MapPin className="w-4 h-4" />
+                  <span>Delivery Address</span>
+                </div>
+                <p className="font-bold text-gray-900">{confirmedOrder.address.fullName} ({confirmedOrder.address.phone})</p>
+                <p className="text-gray-600 leading-relaxed">
+                  {confirmedOrder.address.street}, {confirmedOrder.address.landmark ? 'Near ' + confirmedOrder.address.landmark + ', ' : ''}{confirmedOrder.address.city}, {confirmedOrder.address.state} - {confirmedOrder.address.pincode}
+                </p>
+                <div className="pt-2 flex items-center justify-between text-[11px] text-emerald-800 border-t border-red-100 font-medium">
+                  <span>Payment: <strong>{confirmedOrder.paymentMethod}</strong></span>
+                  <span className="bg-emerald-100 px-2 py-0.5 rounded font-bold">{confirmedOrder.paymentStatus}</span>
+                </div>
+              </div>
+
+              {/* Items Purchased List */}
+              <div className="text-left border rounded-xl overflow-hidden divide-y text-xs max-w-lg mx-auto">
+                <div className="bg-gray-100 p-2.5 font-bold text-gray-700 flex justify-between">
+                  <span>Ordered Items ({confirmedOrder.items.length})</span>
+                  <span className="text-emerald-700 font-bold">Fulfillment: {confirmedOrder.fulfillmentType === 'delivery' ? 'Home Delivery' : 'Store Pickup'}</span>
+                </div>
+                {confirmedOrder.items.map(it => (
+                  <div key={it.product.id} className="p-3 flex items-center justify-between">
+                    <div>
+                      <span className="font-bold text-gray-900 block">{it.product.name}</span>
+                      <span className="text-[11px] text-gray-500">Qty: {it.quantity} • {it.selectedRam || it.product.ram}</span>
+                    </div>
+                    <span className="font-bold text-gray-900 font-mono">
+                      ₹{(it.product.price * it.quantity).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                ))}
+                <div className="p-3 bg-gray-50 flex items-center justify-between font-black text-sm">
+                  <span>Grand Total Paid:</span>
+                  <span className="text-[#E30613] font-mono">₹{confirmedOrder.total.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+                <Link
+                  to="/account"
+                  className="bg-[#E30613] hover:bg-[#c40510] text-white px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition-colors shadow-md flex items-center gap-1.5"
+                >
+                  <span>Track in My Account</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
+                <button
+                  onClick={() => window.print()}
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-5 py-2.5 rounded-full text-xs font-bold transition-colors flex items-center gap-1.5"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print Receipt</span>
+                </button>
+                <Link
+                  to="/"
+                  className="text-xs font-bold text-gray-600 hover:text-gray-900 px-4 py-2"
+                >
+                  Continue Shopping
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right Column: Mini Cart Summary */}
+        {currentStep !== 3 && (
+          <div className="lg:col-span-4 bg-white rounded-2xl border border-gray-200 p-5 shadow-xs space-y-4">
+            <h3 className="font-black text-gray-900 uppercase tracking-tight text-sm pb-3 border-b border-gray-100">
+              Order Summary ({cart.length} items)
+            </h3>
+
+            <div className="max-h-60 overflow-y-auto divide-y divide-gray-100 pr-1 text-xs">
+              {cart.map(item => (
+                <div key={item.product.id} className="py-2.5 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <img
+                      src={item.product.images[0]}
+                      alt={item.product.name}
+                      className="w-10 h-10 object-contain p-1 border rounded bg-gray-50 shrink-0"
+                    />
+                    <div className="truncate">
+                      <p className="font-bold text-gray-800 truncate">{item.product.name}</p>
+                      <p className="text-[10px] text-gray-500">Qty: {item.quantity}</p>
+                    </div>
+                  </div>
+                  <span className="font-mono font-bold shrink-0">
+                    ₹{(item.product.price * item.quantity).toLocaleString('en-IN')}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-3 border-t border-gray-100 space-y-2 text-xs">
+              <div className="flex justify-between text-gray-600">
+                <span>Subtotal</span>
+                <span className="font-mono font-bold">₹{subtotal.toLocaleString('en-IN')}</span>
+              </div>
+              {discount > 0 && (
+                <div className="flex justify-between text-emerald-600 font-semibold">
+                  <span>Discount</span>
+                  <span className="font-mono">- ₹{discount.toLocaleString('en-IN')}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-gray-600">
+                <span>Shipping & Delivery</span>
+                <span className="font-mono font-bold text-emerald-600">
+                  FREE
+                </span>
+              </div>
+              <div className="flex justify-between pt-2 border-t font-black text-base text-gray-900">
+                <span>Total Amount</span>
+                <span className="font-mono text-[#E30613]">
+                  ₹{total.toLocaleString('en-IN')}
+                </span>
+              </div>
+            </div>
+
+            {/* Delivery Assurance */}
+            <div className="p-3 bg-red-50/40 rounded-xl border border-red-100 text-[11px] text-gray-600 space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-[#E30613]">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>100% Secure Checkout</span>
+              </div>
+              <p className="text-[10px] text-gray-500">
+                Free shipping with seal-verified packaging and live SMS updates.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
