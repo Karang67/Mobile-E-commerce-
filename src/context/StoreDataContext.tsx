@@ -4,10 +4,10 @@
  * All pages/components use this context instead of importing static data directly.
  */
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
-import { Product, Store } from '../types';
-import { loadStore, loadHeroSlides, loadBankOffers, loadCoupons } from '../data/adminData';
+import { Product, Store, CategoryItem } from '../types';
+import { loadStore, loadHeroSlides, loadBankOffers, loadCoupons, loadCustomCategories, syncSettingsFromBackend } from '../data/adminData';
 import { HeroSlide, bankOffers as seedBankOffers, coupons as seedCoupons } from '../data/offers';
-import { categories, brands } from '../data/products';
+import { categories as baseCategories, brands } from '../data/products';
 import { getProducts } from '../utils/apiService';
 
 interface StoreDataContextType {
@@ -16,7 +16,7 @@ interface StoreDataContextType {
   heroSlides: HeroSlide[];
   bankOffers: typeof seedBankOffers;
   coupons: typeof seedCoupons;
-  categories: typeof categories;
+  categories: CategoryItem[];
   brands: typeof brands;
   isLoading: boolean;
   refresh: () => void;
@@ -47,6 +47,8 @@ export const StoreDataProvider: React.FC<{ children: ReactNode }> = ({ children 
     const fetchProducts = async () => {
       setIsLoading(true);
       try {
+        // Sync database settings (payment QR, store address) concurrently
+        syncSettingsFromBackend().catch(() => {/* ignore */});
         const data = await getProducts();
         setProducts(data);
       } catch (error) {
@@ -59,10 +61,54 @@ export const StoreDataProvider: React.FC<{ children: ReactNode }> = ({ children 
   }, [tick]);
 
   const value: StoreDataContextType = React.useMemo(() => {
-    const dynamicCategories = categories.map(cat => ({
-      ...cat,
-      itemCount: products.filter(p => p.category === cat.id).length
-    }));
+    // 1. Load custom categories created by admin
+    const savedCustom = loadCustomCategories();
+
+    // 2. Build merged map starting with base categories
+    const categoryMap = new Map<string, CategoryItem>();
+    
+    baseCategories.forEach(cat => {
+      categoryMap.set(cat.id.toLowerCase(), { ...cat, isCustom: false });
+    });
+
+    savedCustom.forEach(cat => {
+      categoryMap.set(cat.id.toLowerCase(), { ...cat, isCustom: true });
+    });
+
+    // 3. Scan products for any custom category strings not yet in list
+    products.forEach(p => {
+      if (p.category) {
+        const raw = p.category.trim();
+        const slug = raw.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        if (slug && !categoryMap.has(slug)) {
+          const capitalized = raw.charAt(0).toUpperCase() + raw.slice(1);
+          categoryMap.set(slug, {
+            id: slug,
+            name: capitalized,
+            desc: `Explore ${capitalized} products`,
+            icon: 'Tag',
+            isCustom: true,
+          });
+        }
+      }
+    });
+
+    // 4. Calculate real-time product counts for each category
+    const dynamicCategories: CategoryItem[] = Array.from(categoryMap.values()).map(cat => {
+      const cId = cat.id.toLowerCase();
+      const cName = cat.name.toLowerCase();
+      const count = products.filter(p => {
+        const pCat = (p.category || '').toLowerCase().trim();
+        const pSlug = pCat.replace(/[^a-z0-9]+/g, '-');
+        return pCat === cId || pCat === cName || pSlug === cId;
+      }).length;
+
+      return {
+        ...cat,
+        itemCount: count,
+        count,
+      };
+    });
 
     const dynamicBrands = brands.map(brand => ({
       ...brand,

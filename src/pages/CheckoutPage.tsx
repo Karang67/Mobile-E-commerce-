@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  CheckCircle2, 
-  MapPin, 
-  CreditCard, 
-  Clock, 
-  ChevronRight, 
-  ArrowLeft, 
+import {
+  CheckCircle2,
+  MapPin,
+  CreditCard,
+  Clock,
+  ChevronRight,
+  ArrowLeft,
   QrCode,
   Banknote,
   Percent,
@@ -19,7 +19,12 @@ import {
   Building,
   Home,
   Check,
-  AlertCircle
+  AlertCircle,
+  Upload,
+  Copy,
+  MessageCircle,
+  ExternalLink,
+  Sparkles
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useCart } from '../context/CartContext';
@@ -28,6 +33,9 @@ import { Address, Order } from '../types';
 import { addAdminNotification } from '../utils/notificationService';
 import { useAuth } from '../context/AuthContext';
 import { syncOrderToMongo } from '../utils/apiService';
+import { loadPaymentSettings } from '../data/adminData';
+import { compressImageFile } from '../utils/imageCompressor';
+import { uploadToCloudinary } from '../utils/cloudinaryService';
 
 export const CheckoutPage: React.FC = () => {
   const { cart, subtotal, discount, total, clearCart } = useCart();
@@ -52,8 +60,8 @@ export const CheckoutPage: React.FC = () => {
             phone: p.phone ? p.phone.replace(/\D/g, '') : '',
             email: p.email || '',
             pincode: '518301',
-            city: p.city || 'Adoni',
-            state: 'Andhra Pradesh',
+            city: p.city || 'Sumerpur',
+            state: 'Rajasthan',
             street: p.address || '',
             landmark: '',
             addressType: 'Home' as 'Home' | 'Work',
@@ -71,8 +79,8 @@ export const CheckoutPage: React.FC = () => {
             phone: a.phone ? a.phone.replace(/\D/g, '') : '',
             email: '',
             pincode: a.pincode || '518301',
-            city: a.city || 'Adoni',
-            state: a.state || 'Andhra Pradesh',
+            city: a.city || 'Sumerpur',
+            state: a.state || 'Rajasthan',
             street: a.street || '',
             landmark: a.landmark || '',
             addressType: a.addressType || 'Home',
@@ -87,9 +95,9 @@ export const CheckoutPage: React.FC = () => {
       fullName: '',
       phone: '',
       email: '',
-      pincode: '518301',
-      city: 'Adoni',
-      state: 'Andhra Pradesh',
+      pincode: '306902',
+      city: 'Sumerpur',
+      state: 'Rajasthan',
       street: '',
       landmark: '',
       addressType: 'Home' as 'Home' | 'Work',
@@ -104,23 +112,54 @@ export const CheckoutPage: React.FC = () => {
     }
   }, [user]);
 
-  // Step 2: Payment Method
-  const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card' | 'cod' | 'netbanking'>('upi');
-  const [upiId, setUpiId] = useState('');
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardExpiry, setCardExpiry] = useState('');
-  const [cardCvv, setCardCvv] = useState('');
+  // Step 2: Payment Method (Only QR Scanner & Cash on Delivery)
+  const paymentSettings = loadPaymentSettings();
+  const [paymentMethod, setPaymentMethod] = useState<'scanner' | 'cod'>(() =>
+    paymentSettings.enableQrScanner ? 'scanner' : 'cod'
+  );
+  const [paymentScreenshot, setPaymentScreenshot] = useState<string>('');
+  const [transactionId, setTransactionId] = useState<string>('');
+  const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
+  const [screenshotError, setScreenshotError] = useState('');
+  const [copiedUpi, setCopiedUpi] = useState(false);
+  const screenshotInputRef = useRef<HTMLInputElement>(null);
 
   // Step 3: Confirmed Order details
   const [confirmedOrder, setConfirmedOrder] = useState<Order | null>(null);
 
+  const handleScreenshotChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingScreenshot(true);
+    setScreenshotError('');
+
+    try {
+      const result = await uploadToCloudinary(file);
+      if (result?.url) {
+        setPaymentScreenshot(result.url);
+      } else {
+        const compressed = await compressImageFile(file, { maxDimension: 1200, quality: 0.85 });
+        setPaymentScreenshot(compressed);
+      }
+    } catch (err: any) {
+      console.error('Failed to upload screenshot', err);
+      setScreenshotError(err.message || 'Failed to upload screenshot. Please try again.');
+    } finally {
+      setUploadingScreenshot(false);
+    }
+  };
+
+  const copyUpiId = () => {
+    if (!paymentSettings.upiId) return;
+    navigator.clipboard.writeText(paymentSettings.upiId);
+    setCopiedUpi(true);
+    setTimeout(() => setCopiedUpi(false), 2000);
+  };
+
   const handleAddressSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isAuthenticated) {
-      openAuthModal(
-        'Please login or create an account with Email OTP to proceed with your order and save your address.',
-        () => setCurrentStep(2)
-      );
+    if (!customer.fullName.trim() || !customer.phone.trim() || !customer.street.trim()) {
       return;
     }
     setCurrentStep(2);
@@ -128,29 +167,30 @@ export const CheckoutPage: React.FC = () => {
 
   const handlePlaceOrder = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isAuthenticated) {
-      openAuthModal('Please login or create an account with Email OTP before confirming your order.');
+
+    if (paymentMethod === 'scanner' && !paymentScreenshot && !transactionId.trim()) {
+      setScreenshotError('Please upload your payment screenshot or enter your Transaction ID / UTR so the shop owner can verify your payment.');
       return;
     }
-    const orderId = 'SHIV-' + Math.floor(100000 + Math.random() * 900000);
-    
+
+    const randomSuffix = typeof crypto !== 'undefined' && crypto.randomUUID 
+      ? crypto.randomUUID().slice(0, 6).toUpperCase() 
+      : Math.random().toString(36).substring(2, 8).toUpperCase();
+    const orderId = `SHIV-${Date.now().toString(36).toUpperCase()}-${randomSuffix}`;
+
     const addressObj: Address = {
       fullName: customer.fullName,
       phone: customer.phone,
       pincode: customer.pincode || '518301',
-      state: customer.state || 'Andhra Pradesh',
-      city: customer.city || 'Adoni',
+      state: customer.state || 'Rajasthan',
+      city: customer.city || 'Sumerpur',
       street: customer.street,
       landmark: customer.landmark,
       addressType: customer.addressType,
     };
 
-    const paymentMethodLabel = 
-      paymentMethod === 'upi' ? 'Online UPI (GPay/PhonePe)' :
-      paymentMethod === 'card' ? 'Credit/Debit Card' :
-      paymentMethod === 'netbanking' ? 'Net Banking' : 'Cash on Delivery (COD)';
-
-    const isPrepaid = paymentMethod !== 'cod';
+    const paymentMethodLabel = paymentMethod === 'scanner' ? 'UPI QR Scanner' : 'Cash on Delivery (COD)';
+    const paymentStatusVal = paymentMethod === 'scanner' ? 'Pending' : 'COD';
 
     const newOrder: Order = {
       id: orderId,
@@ -165,13 +205,17 @@ export const CheckoutPage: React.FC = () => {
       deliveryFee: 0,
       total,
       status: 'Order Placed',
-      paymentStatus: isPrepaid ? 'Verified' : 'COD',
+      paymentStatus: paymentStatusVal,
+      paymentScreenshot: paymentMethod === 'scanner' ? paymentScreenshot : undefined,
+      transactionId: paymentMethod === 'scanner' ? transactionId.trim() : undefined,
       address: addressObj,
       paymentMethod: paymentMethodLabel,
       fulfillmentType,
-      deliveryMethod: fulfillmentType === 'delivery' ? 'Doorstep Delivery' : 'In-Store Pickup (Adoni Store)',
-      estimatedDelivery: fulfillmentType === 'delivery' ? 'Estimated: Tomorrow, by 6:00 PM' : 'Ready Today at Adoni Store',
-      statusMessage: 'Your order has been placed. Our team will verify payment and prepare your order for packing & delivery.',
+      deliveryMethod: fulfillmentType === 'delivery' ? 'Doorstep Delivery' : 'In-Store Pickup (Sumerpur Store)',
+      estimatedDelivery: fulfillmentType === 'delivery' ? 'Estimated: Tomorrow, by 6:00 PM' : 'Ready Today at Sumerpur Store (Main Bazar)',
+      statusMessage: paymentMethod === 'scanner'
+        ? 'Payment screenshot submitted. Shop owner will verify and begin packing.'
+        : 'Cash on Delivery order placed. We are preparing your order.',
     };
 
     // Save order into customer orders in localStorage
@@ -186,9 +230,9 @@ export const CheckoutPage: React.FC = () => {
     }
 
     // Sync order to MongoDB database if API backend is active
-    syncOrderToMongo(newOrder).catch(() => {});
+    syncOrderToMongo(newOrder).catch(() => { });
 
-    // Trigger Admin Notification with complete customer info and payment details
+    // Trigger Admin Notification with payment proof
     try {
       addAdminNotification({
         inquiryId: orderId,
@@ -204,7 +248,9 @@ export const CheckoutPage: React.FC = () => {
         itemsCount: cart.reduce((sum, i) => sum + i.quantity, 0),
         total,
         paymentMethod: paymentMethodLabel,
-        paymentStatus: isPrepaid ? 'Verified' : 'COD',
+        paymentStatus: paymentStatusVal,
+        paymentScreenshot: paymentMethod === 'scanner' ? paymentScreenshot : undefined,
+        transactionId: paymentMethod === 'scanner' ? transactionId.trim() : undefined,
         status: 'Order Placed',
       });
     } catch (err) {
@@ -252,7 +298,7 @@ export const CheckoutPage: React.FC = () => {
         <div className="flex items-center justify-between max-w-xl mx-auto relative">
           {/* Connector Line */}
           <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 bg-gray-200 -z-10" />
-          <div 
+          <div
             className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-[#E30613] -z-10 transition-all duration-300"
             style={{ width: `${((currentStep - 1) / 2) * 100}%` }}
           />
@@ -268,20 +314,18 @@ export const CheckoutPage: React.FC = () => {
             return (
               <div key={s.num} className="flex flex-col items-center bg-[#F8F8F8] px-3">
                 <div
-                  className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-colors shadow-sm ${
-                    isCompleted
-                      ? 'bg-emerald-600 text-white'
-                      : isCurrent
+                  className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-colors shadow-sm ${isCompleted
+                    ? 'bg-emerald-600 text-white'
+                    : isCurrent
                       ? 'bg-[#E30613] text-white ring-4 ring-red-100'
                       : 'bg-white text-gray-400 border border-gray-300'
-                  }`}
+                    }`}
                 >
                   {isCompleted ? <CheckCircle2 className="w-5 h-5" /> : s.num}
                 </div>
                 <span
-                  className={`text-[11px] font-bold mt-1.5 uppercase tracking-wider ${
-                    isCurrent ? 'text-[#E30613]' : 'text-gray-500'
-                  }`}
+                  className={`text-[11px] font-bold mt-1.5 uppercase tracking-wider ${isCurrent ? 'text-[#E30613]' : 'text-gray-500'
+                    }`}
                 >
                   {s.label}
                 </span>
@@ -337,15 +381,13 @@ export const CheckoutPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setFulfillmentType('delivery')}
-                  className={`p-4 rounded-xl border-2 text-left transition-all flex items-start gap-3.5 ${
-                    fulfillmentType === 'delivery'
-                      ? 'border-[#E30613] bg-red-50/40 shadow-xs'
-                      : 'border-gray-200 hover:border-gray-300 bg-white'
-                  }`}
+                  className={`p-4 rounded-xl border-2 text-left transition-all flex items-start gap-3.5 ${fulfillmentType === 'delivery'
+                    ? 'border-[#E30613] bg-red-50/40 shadow-xs'
+                    : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
                 >
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-                    fulfillmentType === 'delivery' ? 'bg-[#E30613] text-white' : 'bg-gray-100 text-gray-600'
-                  }`}>
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${fulfillmentType === 'delivery' ? 'bg-[#E30613] text-white' : 'bg-gray-100 text-gray-600'
+                    }`}>
                     <Truck className="w-5 h-5" />
                   </div>
                   <div>
@@ -362,15 +404,13 @@ export const CheckoutPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setFulfillmentType('pickup')}
-                  className={`p-4 rounded-xl border-2 text-left transition-all flex items-start gap-3.5 ${
-                    fulfillmentType === 'pickup'
-                      ? 'border-[#E30613] bg-red-50/40 shadow-xs'
-                      : 'border-gray-200 hover:border-gray-300 bg-white'
-                  }`}
+                  className={`p-4 rounded-xl border-2 text-left transition-all flex items-start gap-3.5 ${fulfillmentType === 'pickup'
+                    ? 'border-[#E30613] bg-red-50/40 shadow-xs'
+                    : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
                 >
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-                    fulfillmentType === 'pickup' ? 'bg-[#E30613] text-white' : 'bg-gray-100 text-gray-600'
-                  }`}>
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${fulfillmentType === 'pickup' ? 'bg-[#E30613] text-white' : 'bg-gray-100 text-gray-600'
+                    }`}>
                     <Store className="w-5 h-5" />
                   </div>
                   <div>
@@ -379,7 +419,7 @@ export const CheckoutPage: React.FC = () => {
                       <span className="bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded">Instant</span>
                     </div>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      Shivangi Mobile Showroom, Municipal Complex, Adoni. Inspect in person and unbox right away.
+                      Shivangi Mobile, Opp. Nagraj Electronic, Main Bazar, Sumerpur. Inspect in person and unbox right away.
                     </p>
                   </div>
                 </button>
@@ -437,7 +477,7 @@ export const CheckoutPage: React.FC = () => {
                       type="text"
                       value={customer.city}
                       onChange={e => setCustomer({ ...customer, city: e.target.value })}
-                      placeholder="e.g. Adoni"
+                      placeholder="e.g. Sumerpur"
                       className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3.5 py-2.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#E30613]"
                       required
                     />
@@ -448,7 +488,7 @@ export const CheckoutPage: React.FC = () => {
                       type="text"
                       value={customer.state}
                       onChange={e => setCustomer({ ...customer, state: e.target.value })}
-                      placeholder="e.g. Andhra Pradesh"
+                      placeholder="e.g. Rajasthan"
                       className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3.5 py-2.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#E30613]"
                       required
                     />
@@ -572,171 +612,224 @@ export const CheckoutPage: React.FC = () => {
 
               {/* Payment Method Selection Options */}
               <div className="space-y-3">
-                {/* Option 1: Instant Online UPI */}
-                <label
-                  className={`block border-2 rounded-xl p-4 cursor-pointer transition-all ${
-                    paymentMethod === 'upi'
-                      ? 'border-[#E30613] bg-red-50/40 shadow-xs'
+                {/* Option 1: QR Scanner (UPI) */}
+                {paymentSettings.enableQrScanner && (
+                  <label
+                    className={`block border-2 rounded-2xl p-4 cursor-pointer transition-all ${paymentMethod === 'scanner'
+                      ? 'border-[#E30613] bg-red-50/30 shadow-xs'
                       : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      checked={paymentMethod === 'upi'}
-                      onChange={() => setPaymentMethod('upi')}
-                      className="mt-1 text-[#E30613] focus:ring-[#E30613]"
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <QrCode className="w-4 h-4 text-[#0796D2]" />
-                        <span className="font-black text-gray-900 text-sm">
-                          UPI Payment (Google Pay / PhonePe / Paytm / BHIM)
-                        </span>
-                        <span className="bg-blue-100 text-[#0796D2] text-[10px] font-black px-2 py-0.5 rounded uppercase">
-                          Instant Verification
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Zero transaction charges. Admin receives immediate automated payment verification to prioritize packing.
-                      </p>
-                    </div>
-                  </div>
-                </label>
-
-                {/* Option 2: Credit / Debit Card */}
-                <label
-                  className={`block border-2 rounded-xl p-4 cursor-pointer transition-all ${
-                    paymentMethod === 'card'
-                      ? 'border-[#E30613] bg-red-50/40 shadow-xs'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      checked={paymentMethod === 'card'}
-                      onChange={() => setPaymentMethod('card')}
-                      className="mt-1 text-[#E30613] focus:ring-[#E30613]"
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <CreditCard className="w-4 h-4 text-purple-600" />
-                        <span className="font-black text-gray-900 text-sm">
-                          Credit / Debit Card (Visa, Mastercard, RuPay)
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Secure 256-bit encrypted checkout with bank discount eligibility.
-                      </p>
-                    </div>
-                  </div>
-                </label>
-
-                {/* Option 3: Cash on Delivery (COD) */}
-                <label
-                  className={`block border-2 rounded-xl p-4 cursor-pointer transition-all ${
-                    paymentMethod === 'cod'
-                      ? 'border-[#E30613] bg-red-50/40 shadow-xs'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      checked={paymentMethod === 'cod'}
-                      onChange={() => setPaymentMethod('cod')}
-                      className="mt-1 text-[#E30613] focus:ring-[#E30613]"
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <Banknote className="w-4 h-4 text-emerald-600" />
-                        <span className="font-black text-gray-900 text-sm">
-                          Cash on Delivery (Pay upon arrival)
-                        </span>
-                        <span className="bg-emerald-600 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase">
-                          Available
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Pay with cash or UPI QR directly to the delivery executive when the parcel reaches your doorstep.
-                      </p>
-                    </div>
-                  </div>
-                </label>
-              </div>
-
-              {/* Dynamic Sub-form based on choice */}
-              <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 text-xs">
-                {paymentMethod === 'upi' && (
-                  <div className="space-y-2">
-                    <span className="font-bold text-gray-800 block">Enter Your Virtual Payment Address (VPA) / UPI ID</span>
-                    <div className="flex gap-2">
+                      }`}
+                  >
+                    <div className="flex items-start gap-3">
                       <input
-                        type="text"
-                        value={upiId}
-                        onChange={e => setUpiId(e.target.value)}
-                        placeholder="yourname@okhdfcbank"
-                        className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono"
+                        type="radio"
+                        name="paymentMethod"
+                        checked={paymentMethod === 'scanner'}
+                        onChange={() => { setPaymentMethod('scanner'); setScreenshotError(''); }}
+                        className="mt-1 text-[#E30613] focus:ring-[#E30613]"
                       />
-                      <button
-                        type="button"
-                        className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold shrink-0 hover:bg-emerald-700"
-                      >
-                        Verify UPI
-                      </button>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <QrCode className="w-5 h-5 text-[#E30613]" />
+                          <span className="font-black text-gray-900 text-sm">
+                            UPI QR Scanner (Scan & Pay)
+                          </span>
+                          <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2 py-0.5 rounded uppercase">
+                            Recommended
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Scan the shop QR code using Google Pay, PhonePe, Paytm, or BHIM. Pay the exact amount and upload your payment screenshot.
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  </label>
                 )}
 
-                {paymentMethod === 'card' && (
-                  <div className="space-y-3">
-                    <span className="font-bold text-gray-800 block">Enter Card Details (Demo Mode)</span>
+                {/* Option 2: Cash on Delivery (COD) */}
+                {paymentSettings.enableCod && (
+                  <label
+                    className={`block border-2 rounded-2xl p-4 cursor-pointer transition-all ${paymentMethod === 'cod'
+                      ? 'border-[#E30613] bg-red-50/30 shadow-xs'
+                      : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        checked={paymentMethod === 'cod'}
+                        onChange={() => { setPaymentMethod('cod'); setScreenshotError(''); }}
+                        className="mt-1 text-[#E30613] focus:ring-[#E30613]"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <Banknote className="w-5 h-5 text-emerald-600" />
+                          <span className="font-black text-gray-900 text-sm">
+                            Cash on Delivery (COD)
+                          </span>
+                          <span className="bg-blue-100 text-blue-800 text-[10px] font-black px-2 py-0.5 rounded uppercase">
+                            Pay on Delivery
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Pay directly with cash or UPI QR to the delivery personnel upon delivery of your package.
+                        </p>
+                      </div>
+                    </div>
+                  </label>
+                )}
+              </div>
+
+              {/* Dynamic QR Scanner Details & Screenshot Upload */}
+              {paymentMethod === 'scanner' && (
+                <div className="bg-gray-50 rounded-2xl p-5 border border-gray-200 text-xs space-y-5 animate-fade-in">
+                  <div className="text-center space-y-3">
+                    <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">
+                      Scan To Pay Exact Amount
+                    </span>
+
+                    <div className="text-2xl font-black text-[#E30613] font-mono">
+                      ₹{total.toLocaleString('en-IN')}
+                    </div>
+
+                    {/* QR Code Container */}
+                    <div className="w-52 h-52 mx-auto bg-white p-2.5 rounded-2xl shadow-lg border-2 border-gray-200 flex items-center justify-center relative group">
+                      {paymentSettings.qrCodeImage ? (
+                        <img
+                          src={paymentSettings.qrCodeImage}
+                          alt="Shivangi Mobile UPI Scanner"
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center gap-2 text-gray-400">
+                          <QrCode className="w-12 h-12 text-gray-300" />
+                          <span className="text-xs">QR Scanner Image</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Store UPI Info */}
+                    <div className="space-y-1 pt-1">
+                      <div className="inline-flex items-center gap-2 bg-white border border-gray-300 py-1.5 px-3 rounded-xl font-mono text-xs font-bold text-gray-800 shadow-xs">
+                        <span>{paymentSettings.upiId || 'shivangimobile@upi'}</span>
+                        <button
+                          type="button"
+                          onClick={copyUpiId}
+                          className="text-gray-500 hover:text-gray-800 transition-colors"
+                          title="Copy UPI ID"
+                        >
+                          {copiedUpi ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                      <div className="text-[11px] text-gray-600 font-medium">
+                        Payee: <strong className="text-gray-900">{paymentSettings.payeeName}</strong>
+                      </div>
+                    </div>
+
+                    {/* Instructions Banner */}
+                    <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-3 text-left text-[11px] text-amber-900 leading-relaxed max-w-md mx-auto">
+                      💡 <strong>Instructions:</strong> {paymentSettings.instructions}
+                    </div>
+                  </div>
+
+                  {/* Screenshot Upload Section */}
+                  <div className="border-t border-gray-200 pt-4 space-y-3 max-w-md mx-auto">
                     <div>
-                      <label className="block text-gray-600 mb-1">Card Number</label>
+                      <label className="block text-xs font-black text-gray-800 uppercase tracking-wide mb-1">
+                        1. Upload Payment Screenshot *
+                      </label>
+                      <p className="text-[11px] text-gray-500 mb-2">
+                        Upload the confirmation screen showing transaction status and amount.
+                      </p>
+
+                      <div
+                        onClick={() => screenshotInputRef.current?.click()}
+                        className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${paymentScreenshot
+                          ? 'border-emerald-500 bg-emerald-50/30'
+                          : 'border-gray-300 hover:border-[#E30613] bg-white'
+                          }`}
+                      >
+                        {paymentScreenshot ? (
+                          <div className="space-y-2">
+                            <div className="w-24 h-24 mx-auto rounded-lg overflow-hidden border border-emerald-300 shadow-sm">
+                              <img
+                                src={paymentScreenshot}
+                                alt="Payment Proof"
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div className="flex items-center justify-center gap-1.5 text-emerald-700 font-bold text-xs">
+                              <CheckCircle2 className="w-4 h-4" />
+                              <span>Screenshot Attached!</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                screenshotInputRef.current?.click();
+                              }}
+                              className="text-[10px] text-gray-500 hover:text-gray-800 underline block mx-auto"
+                            >
+                              Change Screenshot
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="space-y-1.5 py-2">
+                            <Upload className="w-6 h-6 text-gray-400 mx-auto" />
+                            <div className="font-bold text-xs text-gray-800">
+                              {uploadingScreenshot ? 'Uploading Screenshot...' : 'Click to Upload Screenshot'}
+                            </div>
+                            <div className="text-[10px] text-gray-400">PNG, JPG, JPEG (Max 10MB)</div>
+                          </div>
+                        )}
+                        <input
+                          ref={screenshotInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleScreenshotChange}
+                          className="hidden"
+                        />
+                      </div>
+                    </div>
+
+                    {/* UTR / Transaction ID */}
+                    <div>
+                      <label className="block text-xs font-black text-gray-800 uppercase tracking-wide mb-1">
+                        2. UPI Transaction ID / UTR (Recommended)
+                      </label>
                       <input
                         type="text"
-                        value={cardNumber}
-                        onChange={e => setCardNumber(e.target.value)}
-                        className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono"
+                        value={transactionId}
+                        onChange={e => setTransactionId(e.target.value)}
+                        placeholder="e.g. 408123456789 (12-digit UTR)"
+                        className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-xs text-gray-900 font-mono focus:outline-none focus:ring-2 focus:ring-[#E30613]"
                       />
+                      <p className="text-[10px] text-gray-400 mt-1">Found in your Google Pay, PhonePe, or Paytm receipt.</p>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-gray-600 mb-1">Valid Thru (MM/YY)</label>
-                        <input
-                          type="text"
-                          value={cardExpiry}
-                          onChange={e => setCardExpiry(e.target.value)}
-                          className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-gray-600 mb-1">CVV</label>
-                        <input
-                          type="password"
-                          value={cardCvv}
-                          onChange={e => setCardCvv(e.target.value)}
-                          maxLength={4}
-                          className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
 
-                {paymentMethod === 'cod' && (
-                  <div className="space-y-1 text-gray-700">
-                    <span className="font-bold text-gray-900 block">✓ Cash on Delivery Selected</span>
-                    <p className="text-[11px] leading-relaxed text-gray-600">
-                      Our delivery personnel will arrive with your sealed package. You can inspect the box seal and pay via cash or UPI QR on spot.
-                    </p>
+                    {screenshotError && (
+                      <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                        <span>{screenshotError}</span>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
+
+              {/* COD Description Box */}
+              {paymentMethod === 'cod' && (
+                <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 text-xs space-y-1.5 animate-fade-in">
+                  <div className="flex items-center gap-2 text-emerald-800 font-bold">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>Cash on Delivery Selected</span>
+                  </div>
+                  <p className="text-[11px] text-gray-600 leading-relaxed">
+                    Our delivery agent will deliver your sealed box to your address. You can inspect the seal and pay <strong>₹{total.toLocaleString('en-IN')}</strong> in cash or via UPI QR scanner upon delivery.
+                  </p>
+                </div>
+              )}
 
               {/* Submit Order CTA */}
               <div className="pt-3 flex justify-between items-center">
@@ -750,9 +843,10 @@ export const CheckoutPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={handlePlaceOrder}
-                  className="bg-[#E30613] hover:bg-[#c40510] text-white px-8 py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-lg flex items-center gap-2"
+                  disabled={uploadingScreenshot}
+                  className="bg-[#E30613] hover:bg-[#c40510] text-white px-8 py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-lg flex items-center gap-2 disabled:opacity-50"
                 >
-                  <span>Pay ₹{total.toLocaleString('en-IN')} & Place Order</span>
+                  <span>{paymentMethod === 'scanner' ? 'Submit Payment & Place Order' : 'Place Cash on Delivery Order'}</span>
                   <CheckCircle2 className="w-4 h-4" />
                 </button>
               </div>
@@ -810,10 +904,62 @@ export const CheckoutPage: React.FC = () => {
                 <div className="p-3 bg-white rounded-xl border border-gray-200 text-xs text-gray-600 flex items-center gap-2.5">
                   <Clock className="w-4 h-4 text-[#E30613] shrink-0" />
                   <span>
-                    <strong>Next Step:</strong> Admin will verify payment success in the control panel, then advance your order to <strong>Preparing</strong>, <strong>Packed</strong>, and <strong>Out for Delivery</strong>.
+                    <strong>Next Step:</strong> Shop owner will verify your payment screenshot in the admin dashboard, then advance your order to <strong>Preparing</strong>, <strong>Packed</strong>, and <strong>Out for Delivery</strong>.
                   </span>
                 </div>
               </div>
+
+              {/* Payment Verification Banner & WhatsApp Action for Scanner Orders */}
+              {confirmedOrder.paymentMethod === 'UPI QR Scanner' && (
+                <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 text-left max-w-lg mx-auto space-y-3 shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black uppercase text-amber-900 flex items-center gap-1.5">
+                      <Clock className="w-4 h-4 text-amber-600" />
+                      <span>Payment Verification Pending</span>
+                    </span>
+                    <span className="bg-amber-200 text-amber-900 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
+                      Awaiting Verification
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-amber-800 leading-relaxed">
+                    Thank you! Your payment screenshot has been received. The shop owner is reviewing your transaction and will immediately advance your order to <strong>Preparing & Packed</strong>.
+                  </p>
+
+                  {confirmedOrder.transactionId && (
+                    <div className="text-xs text-gray-700 bg-white border border-amber-200 p-2 rounded-lg font-mono">
+                      Transaction UTR: <strong>{confirmedOrder.transactionId}</strong>
+                    </div>
+                  )}
+
+                  {confirmedOrder.paymentScreenshot && (
+                    <div className="flex items-center gap-3 bg-white p-2 rounded-xl border border-amber-200">
+                      <img
+                        src={confirmedOrder.paymentScreenshot}
+                        alt="Payment Proof"
+                        className="w-12 h-12 object-cover rounded-lg border"
+                      />
+                      <div className="text-xs text-gray-600">
+                        <span className="font-bold text-gray-900 block">Proof Uploaded Successfully</span>
+                        <span className="text-[11px] text-gray-500">Stored safely for store verification.</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Direct WhatsApp Confirmation Button */}
+                  <a
+                    href={`https://wa.me/917841976969?text=${encodeURIComponent(
+                      `Hello Shivangi Mobile (Sumerpur), I have placed Order #${confirmedOrder.id} for ₹${confirmedOrder.total.toLocaleString('en-IN')} via UPI Scanner.\nCustomer: ${confirmedOrder.address.fullName} (${confirmedOrder.address.phone})\n${confirmedOrder.transactionId ? 'UTR: ' + confirmedOrder.transactionId + '\n' : ''}Please verify my payment screenshot and start packing!`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-3 px-4 rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all text-center"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    <span>Send Payment Proof to Shop Owner on WhatsApp</span>
+                  </a>
+                </div>
+              )}
 
               {/* Shipping Details Box */}
               <div className="bg-red-50/50 border border-red-200 rounded-xl p-4 text-xs text-left max-w-md mx-auto space-y-1.5">

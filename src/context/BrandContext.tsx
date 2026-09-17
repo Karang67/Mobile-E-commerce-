@@ -25,9 +25,9 @@ export const BrandProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const [pincode, setPincodeState] = useState<string>(() => {
     try {
-      return localStorage.getItem(PINCODE_KEY) || '500001';
+      return localStorage.getItem(PINCODE_KEY) || '306902';
     } catch {
-      return '500001';
+      return '306902';
     }
   });
 
@@ -54,8 +54,8 @@ export const BrandProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       value={{
         brandName,
         setBrandName,
-        brandTagline: 'South India’s Premier Mobile & Electronics Destination',
-        storeTagline: 'ADONI, ANDHRA PRADESH',
+        brandTagline: 'Wholesaler Dealer in all type Mobiles & Accessories · Sales & Service',
+        storeTagline: 'MAIN BAZAR, SUMERPUR (RAJASTHAN)',
         pincode,
         setPincode,
       }}

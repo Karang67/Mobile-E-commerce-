@@ -1,12 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Flame, 
-  Sparkles, 
-  Clock, 
-  MapPin, 
-  ChevronRight, 
-  Percent, 
+import {
+  Flame,
+  Sparkles,
+  Clock,
+  MapPin,
+  ChevronRight,
+  Percent,
   TrendingUp,
   ArrowRight,
   ShieldCheck
@@ -49,8 +49,8 @@ export const HomePage: React.FC = () => {
               <Sparkles className="w-4 h-4 text-yellow-500" />
             </h2>
           </div>
-          <Link 
-            to="/shop/smartphones" 
+          <Link
+            to="/shop/smartphones"
             className="text-xs font-bold text-[#0796D2] hover:underline"
           >
             View All →
@@ -152,8 +152,8 @@ export const HomePage: React.FC = () => {
               <TrendingUp className="w-4 h-4 text-[#0796D2]" />
             </h2>
           </div>
-          <Link 
-            to="/shop/tablets" 
+          <Link
+            to="/shop/tablets"
             className="text-xs font-bold text-[#0796D2] hover:underline"
           >
             View More →
@@ -178,17 +178,17 @@ export const HomePage: React.FC = () => {
             <div className="space-y-2 text-center lg:text-left">
               <div className="inline-flex items-center gap-1.5 bg-red-50 text-[#E30613] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
                 <MapPin className="w-3.5 h-3.5" />
-                <span>Adoni Flagship Store</span>
+                <span>Sumerpur Flagship Store</span>
               </div>
               <h2 className="text-xl md:text-3xl font-black text-gray-900 uppercase tracking-tight">
-                Visit Shivangi Mobile Showroom in Adoni
+                Visit Shivangi Mobile Showroom in Sumerpur
               </h2>
               <p className="text-xs md:text-sm text-gray-600 max-w-xl">
-                Experience live product demos, get instant trade-in valuations, and collect online reserved orders in person at our Adoni store counter.
+                Experience live product demos, get instant trade-in valuations, and collect online reserved orders in person at our Sumerpur store counter.
               </p>
               <div className="pt-2 flex flex-wrap gap-2 justify-center lg:justify-start">
                 <span className="bg-red-50 text-[#E30613] text-[11px] font-bold px-3 py-1 rounded-md border border-red-100">
-                  📍 Municipal Complex, Bus Stand Road, Adoni
+                  📍 Opp. Nagraj Electronic, Main Bazar, Sumerpur - 306902
                 </span>
                 <span className="bg-gray-100 text-gray-700 text-[11px] font-semibold px-2.5 py-1 rounded-md">
                   Open 10 AM – 9:30 PM

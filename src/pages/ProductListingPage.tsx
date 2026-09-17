@@ -16,40 +16,65 @@ export const ProductListingPage: React.FC = () => {
   const { category: urlCategory, brand: urlBrand } = useParams<{ category?: string; brand?: string }>();
   const { products, categories, brands } = useStoreData();
 
+  // Dynamic price bounds
+  const maxPossiblePrice = useMemo(() => {
+    if (!products.length) return 200000;
+    const highest = Math.max(...products.map(p => p.price || 0));
+    return Math.max(highest, 150000);
+  }, [products]);
+
   // Filter states
   const [selectedCategory, setSelectedCategory] = useState<string>(urlCategory || 'all');
   const [selectedBrand, setSelectedBrand] = useState<string>(urlBrand || 'all');
-  const [maxPrice, setMaxPrice] = useState<number>(150000);
+  const [userMaxPrice, setUserMaxPrice] = useState<number | null>(null);
   const [selectedRam, setSelectedRam] = useState<string>('all');
   const [selectedStorage, setSelectedStorage] = useState<string>('all');
   const [onlyInStock, setOnlyInStock] = useState<boolean>(false);
   const [sortBy, setSortBy] = useState<string>('relevance');
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState<boolean>(false);
 
+  const effectiveMaxPrice = userMaxPrice !== null ? userMaxPrice : maxPossiblePrice;
+
   // Sync with URL params if changed
   React.useEffect(() => {
-    if (urlCategory) setSelectedCategory(urlCategory);
-    if (urlBrand) setSelectedBrand(urlBrand);
+    setSelectedCategory(urlCategory || 'all');
+    setSelectedBrand(urlBrand || 'all');
   }, [urlCategory, urlBrand]);
 
   // Unique RAM & Storage options
-  const ramOptions = ['all', '8 GB', '12 GB', '16 GB'];
-  const storageOptions = ['all', '128 GB', '256 GB', '512 GB'];
+  const ramOptions = ['all', '4 GB', '6 GB', '8 GB', '12 GB', '16 GB'];
+  const storageOptions = ['all', '64 GB', '128 GB', '256 GB', '512 GB', '1 TB'];
+
+  const normalizeSpec = (val?: string) => (val ? val.toLowerCase().replace(/[^a-z0-9]/g, '') : '');
 
   // Filter & Sort Logic
   const filteredProducts = useMemo(() => {
     return products
       .filter(p => {
-        // Category filter
-        if (selectedCategory !== 'all' && p.category !== selectedCategory) return false;
+        // Category filter (case-insensitive & slug aware)
+        if (selectedCategory !== 'all') {
+          const sel = selectedCategory.toLowerCase().trim();
+          const pCat = (p.category || '').toLowerCase().trim();
+          const pSlug = pCat.replace(/[^a-z0-9]+/g, '-');
+          const matched = categories.find(c => c.id.toLowerCase() === sel || c.name.toLowerCase() === sel);
+          const cId = matched ? matched.id.toLowerCase() : sel;
+          const cName = matched ? matched.name.toLowerCase() : sel;
+          if (pCat !== cId && pCat !== cName && pSlug !== cId) return false;
+        }
         // Brand filter
-        if (selectedBrand !== 'all' && p.brand.toLowerCase() !== selectedBrand.toLowerCase()) return false;
-        // Price filter
-        if (p.price > maxPrice) return false;
+        if (selectedBrand !== 'all' && p.brand?.trim().toLowerCase() !== selectedBrand.trim().toLowerCase()) return false;
+        // Price filter (only filter if user dragged the slider)
+        if (userMaxPrice !== null && p.price > userMaxPrice) return false;
         // RAM filter
-        if (selectedRam !== 'all' && p.ram && !p.ram.includes(selectedRam)) return false;
+        if (selectedRam !== 'all') {
+          if (!p.ram) return false;
+          if (!normalizeSpec(p.ram).includes(normalizeSpec(selectedRam))) return false;
+        }
         // Storage filter
-        if (selectedStorage !== 'all' && p.storage && !p.storage.includes(selectedStorage)) return false;
+        if (selectedStorage !== 'all') {
+          if (!p.storage) return false;
+          if (!normalizeSpec(p.storage).includes(normalizeSpec(selectedStorage))) return false;
+        }
         // In stock
         if (onlyInStock && !p.inStock) return false;
         return true;
@@ -61,12 +86,12 @@ export const ProductListingPage: React.FC = () => {
         if (sortBy === 'discount') return b.discount - a.discount;
         return 0; // relevance
       });
-  }, [selectedCategory, selectedBrand, maxPrice, selectedRam, selectedStorage, onlyInStock, sortBy]);
+  }, [products, selectedCategory, selectedBrand, userMaxPrice, selectedRam, selectedStorage, onlyInStock, sortBy, categories]);
 
   const resetFilters = () => {
     setSelectedCategory('all');
     setSelectedBrand('all');
-    setMaxPrice(150000);
+    setUserMaxPrice(null);
     setSelectedRam('all');
     setSelectedStorage('all');
     setOnlyInStock(false);
@@ -79,8 +104,8 @@ export const ProductListingPage: React.FC = () => {
       return b ? `${b.name} Mobiles & Gadgets` : `${selectedBrand} Store`;
     }
     if (selectedCategory !== 'all') {
-      const c = categories.find(x => x.id === selectedCategory);
-      return c ? c.name : 'Electronics';
+      const c = categories.find(x => x.id.toLowerCase() === selectedCategory.toLowerCase() || x.name.toLowerCase() === selectedCategory.toLowerCase());
+      return c ? c.name : selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1);
     }
     return 'All Mobiles & Electronics';
   };
@@ -148,8 +173,8 @@ export const ProductListingPage: React.FC = () => {
 
       {/* Main Content Layout: Sidebar + Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Desktop Sidebar Filters */}
-        <aside className="hidden lg:block lg:col-span-3 bg-white rounded-2xl border border-gray-200 p-5 shadow-xs space-y-6">
+        {/* Desktop Sidebar Filters (Sticky & Fixed in Position on Scroll) */}
+        <aside className="hidden lg:block lg:col-span-3 bg-white rounded-2xl border border-gray-200 p-5 shadow-xs space-y-6 sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pr-2 scrollbar-thin">
           <div className="flex items-center justify-between pb-3 border-b border-gray-100">
             <h3 className="font-black text-gray-900 uppercase text-xs tracking-wider flex items-center gap-1.5">
               <Filter className="w-4 h-4 text-[#E30613]" />
@@ -166,59 +191,76 @@ export const ProductListingPage: React.FC = () => {
 
           {/* Filter: Category */}
           <div>
-            <h4 className="text-xs font-bold text-gray-800 uppercase mb-2">Category</h4>
-            <div className="space-y-1 text-xs">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-xs font-bold text-gray-800 uppercase">Category</h4>
+              <span className="text-[10px] text-gray-400 font-medium">{categories.length} total</span>
+            </div>
+            <div className="space-y-1 text-xs max-h-60 overflow-y-auto pr-1">
               <button
                 onClick={() => setSelectedCategory('all')}
-                className={`w-full text-left px-2.5 py-1.5 rounded-md font-medium transition-colors ${
+                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg font-medium transition-colors ${
                   selectedCategory === 'all'
                     ? 'bg-red-50 text-[#E30613] font-bold'
                     : 'text-gray-600 hover:bg-gray-50'
                 }`}
               >
-                All Categories
+                <span>All Categories</span>
+                <span className="text-[11px] opacity-75 font-mono">({products.length})</span>
               </button>
-              {categories.map(c => (
-                <button
-                  key={c.id}
-                  onClick={() => setSelectedCategory(c.id)}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-md font-medium transition-colors ${
-                    selectedCategory === c.id
-                      ? 'bg-red-50 text-[#E30613] font-bold'
-                      : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  {c.name}
-                </button>
-              ))}
+              {categories.map(c => {
+                const isActive = selectedCategory.toLowerCase() === c.id.toLowerCase() || selectedCategory.toLowerCase() === c.name.toLowerCase();
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => setSelectedCategory(c.id)}
+                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg font-medium transition-colors ${
+                      isActive
+                        ? 'bg-red-50 text-[#E30613] font-bold'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="truncate">{c.name}</span>
+                    <span className="text-[11px] opacity-75 font-mono shrink-0 ml-1.5">
+                      ({c.itemCount ?? 0})
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           {/* Filter: Brand */}
           <div>
-            <h4 className="text-xs font-bold text-gray-800 uppercase mb-2">Brand</h4>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-xs font-bold text-gray-800 uppercase">Brand</h4>
+              <span className="text-[10px] text-gray-400 font-medium">{brands.length} brands</span>
+            </div>
             <div className="space-y-1 text-xs max-h-48 overflow-y-auto pr-1">
               <button
                 onClick={() => setSelectedBrand('all')}
-                className={`w-full text-left px-2.5 py-1.5 rounded-md font-medium transition-colors ${
+                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg font-medium transition-colors ${
                   selectedBrand === 'all'
                     ? 'bg-red-50 text-[#E30613] font-bold'
                     : 'text-gray-600 hover:bg-gray-50'
                 }`}
               >
-                All Brands
+                <span>All Brands</span>
+                <span className="text-[11px] opacity-75 font-mono">({products.length})</span>
               </button>
               {brands.map(b => (
                 <button
                   key={b.id}
                   onClick={() => setSelectedBrand(b.id)}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-md font-medium transition-colors ${
+                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg font-medium transition-colors ${
                     selectedBrand.toLowerCase() === b.id.toLowerCase()
                       ? 'bg-red-50 text-[#E30613] font-bold'
                       : 'text-gray-600 hover:bg-gray-50'
                   }`}
                 >
-                  {b.name}
+                  <span className="truncate">{b.name}</span>
+                  <span className="text-[11px] opacity-75 font-mono shrink-0 ml-1.5">
+                    ({(b as any).count ?? 0})
+                  </span>
                 </button>
               ))}
             </div>
@@ -228,20 +270,20 @@ export const ProductListingPage: React.FC = () => {
           <div>
             <div className="flex justify-between items-center text-xs font-bold text-gray-800 uppercase mb-2">
               <span>Max Price</span>
-              <span className="font-mono text-[#E30613]">₹{maxPrice.toLocaleString('en-IN')}</span>
+              <span className="font-mono text-[#E30613]">₹{effectiveMaxPrice.toLocaleString('en-IN')}</span>
             </div>
             <input
               type="range"
               min={2000}
-              max={150000}
+              max={maxPossiblePrice}
               step={1000}
-              value={maxPrice}
-              onChange={e => setMaxPrice(Number(e.target.value))}
+              value={effectiveMaxPrice}
+              onChange={e => setUserMaxPrice(Number(e.target.value))}
               className="w-full accent-[#E30613]"
             />
             <div className="flex justify-between text-[10px] text-gray-400 mt-1 font-mono">
               <span>₹2,000</span>
-              <span>₹1,50,000</span>
+              <span>₹{maxPossiblePrice.toLocaleString('en-IN')}</span>
             </div>
           </div>
 
@@ -374,15 +416,15 @@ export const ProductListingPage: React.FC = () => {
                 <div>
                   <div className="flex justify-between font-bold mb-1">
                     <span>Max Price</span>
-                    <span className="text-[#E30613]">₹{maxPrice.toLocaleString('en-IN')}</span>
+                    <span className="text-[#E30613]">₹{effectiveMaxPrice.toLocaleString('en-IN')}</span>
                   </div>
                   <input
                     type="range"
                     min={2000}
-                    max={150000}
+                    max={maxPossiblePrice}
                     step={2000}
-                    value={maxPrice}
-                    onChange={e => setMaxPrice(Number(e.target.value))}
+                    value={effectiveMaxPrice}
+                    onChange={e => setUserMaxPrice(Number(e.target.value))}
                     className="w-full accent-[#E30613]"
                   />
                 </div>

@@ -10,7 +10,7 @@ export const BenefitsStrip: React.FC = () => {
     },
     {
       title: 'STORE PICKUP',
-      subtitle: 'Instant at Adoni Store',
+      subtitle: 'Instant at Sumerpur Store',
       icon: Clock,
     },
     {

@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { 
-  Trash2, 
-  Heart, 
-  ShoppingBag, 
-  ArrowRight, 
-  Clock, 
-  ShieldCheck, 
-  Tag, 
-  Plus, 
+import {
+  Trash2,
+  Heart,
+  ShoppingBag,
+  ArrowRight,
+  Clock,
+  ShieldCheck,
+  Tag,
+  Plus,
   Minus,
   CheckCircle2,
   X,
@@ -22,17 +22,17 @@ import { useAuth } from '../context/AuthContext';
 export const CartPage: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated, openAuthModal } = useAuth();
-  const { 
-    cart, 
-    removeFromCart, 
-    updateQuantity, 
-    subtotal, 
-    discount, 
-    deliveryFee, 
-    total, 
-    appliedCoupon, 
-    applyCoupon, 
-    removeCoupon 
+  const {
+    cart,
+    removeFromCart,
+    updateQuantity,
+    subtotal,
+    discount,
+    deliveryFee,
+    total,
+    appliedCoupon,
+    applyCoupon,
+    removeCoupon
   } = useCart();
   const { toggleWishlist } = useWishlist();
 
@@ -314,7 +314,7 @@ export const CartPage: React.FC = () => {
               </div>
               <div className="flex items-center gap-2">
                 <Clock className="w-3.5 h-3.5 text-[#0796D2]" />
-                <span>Instant Store Pickup at Shivangi Mobile, Adoni</span>
+                <span>Instant Store Pickup at Shivangi Mobile, Sumerpur</span>
               </div>
             </div>
           </div>

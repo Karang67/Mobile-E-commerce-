@@ -47,10 +47,10 @@ export const StoresPage: React.FC = () => {
             <span>{storeTagline}</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-gray-900 uppercase tracking-tight">
-            Shivangi Mobile Showroom in Adoni
+            Shivangi Mobile Showroom in Sumerpur
           </h1>
           <p className="text-xs sm:text-sm text-gray-500 mt-1 max-w-2xl">
-            Visit our authorized experience store in Adoni, Andhra Pradesh. Walk in for hands-on live demos, trade-in valuations, instant counter inquiry pickups, and free device setup.
+            Visit our authorized multi-brand showroom Opp. Nagraj Electronic, Main Bazar, Sumerpur (Rajasthan) - 306902. Wholesaler Dealer in all type mobiles & accessories, sales & service.
           </p>
         </div>
 

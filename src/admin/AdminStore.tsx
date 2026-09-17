@@ -30,9 +30,8 @@ export const AdminStore: React.FC = () => {
         </div>
         <button
           onClick={handleSave}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${
-            saved ? 'bg-emerald-600 text-white' : 'bg-[#E30613] hover:bg-[#c40510] text-white'
-          }`}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${saved ? 'bg-emerald-600 text-white' : 'bg-[#E30613] hover:bg-[#c40510] text-white'
+            }`}
         >
           {saved ? <CheckCircle2 className="w-4 h-4" /> : <Save className="w-4 h-4" />}
           {saved ? 'Saved!' : 'Save Store Info'}
@@ -42,17 +41,17 @@ export const AdminStore: React.FC = () => {
       <div className="bg-[#1B2430] rounded-2xl border border-gray-700/40 p-6 space-y-5">
         <div>
           <label className={labelCls}>Store Name</label>
-          <input className={inputCls} value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Shivangi Mobile - Adoni Outlet" />
+          <input className={inputCls} value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Shivangi Mobile - Sumerpur Outlet" />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className={labelCls}>City</label>
-            <input className={inputCls} value={form.city} onChange={e => set('city', e.target.value)} placeholder="Adoni" />
+            <input className={inputCls} value={form.city} onChange={e => set('city', e.target.value)} placeholder="Sumerpur" />
           </div>
           <div>
             <label className={labelCls}>State</label>
-            <input className={inputCls} value={form.state} onChange={e => set('state', e.target.value)} placeholder="Andhra Pradesh" />
+            <input className={inputCls} value={form.state} onChange={e => set('state', e.target.value)} placeholder="Rajasthan" />
           </div>
         </div>
 

@@ -1,189 +1,160 @@
 import express from 'express';
-import mongoose from 'mongoose';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import mongoSanitize from 'express-mongo-sanitize';
 import dotenv from 'dotenv';
-import multer from 'multer';
-import { v2 as cloudinary } from 'cloudinary';
-import { Order } from './models/Order.js';
-import { Product } from './models/Product.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+// Load environment variables
 dotenv.config();
-dotenv.config({ path: '../.env' });
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+import { connectDB } from './config/db.js';
+import productRoutes from './routes/productRoutes.js';
+import orderRoutes from './routes/orderRoutes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
+import authRoutes from './routes/authRoutes.js';
+import settingRoutes from './routes/settingRoutes.js';
+import { notFound, errorHandler } from './middlewares/errorHandler.js';
 
 const app = express();
-const PORT = process.env.PORT || 5000;
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/shivangi_mobile';
+const PORT = process.env.PORT || 5001;
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-  secure: true,
-});
+// Connect to MongoDB Atlas
+connectDB();
 
-// Configure Multer for memory upload
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
-});
-
-// Middlewares
-app.use(cors());
-app.use(express.json({ limit: '10mb' }));
-
-// MongoDB Connection
-mongoose.connect(MONGODB_URI)
-  .then(() => {
-    console.log(`[MongoDB] Connected successfully to: ${MONGODB_URI}`);
-  })
-  .catch((err) => {
-    console.warn(`[MongoDB] Notice: Could not connect to MongoDB at ${MONGODB_URI} (${err.message}). The client will use localStorage fallback safely until MongoDB is active.`);
-  });
-
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    mongoConnected: mongoose.connection.readyState === 1,
-    time: new Date().toISOString()
-  });
-});
-
-// --- CLOUDINARY UPLOAD ENDPOINT ---
-app.post('/api/upload', upload.single('image'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'No image file uploaded' });
-  }
-
-  const uploadStream = cloudinary.uploader.upload_stream(
-    {
-      folder: 'shivangi_mobile',
-      resource_type: 'image',
+// ─── SEC-010: Security Headers (helmet) ──────────────────────────────────────
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        imgSrc: ["'self'", 'data:', 'https://res.cloudinary.com', 'https://api.qrserver.com'],
+        connectSrc: ["'self'"],
+        frameSrc: ["'none'"],
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
+      },
     },
-    (error, result) => {
-      if (error) {
-        console.error('[Cloudinary Upload Error]', error);
-        return res.status(500).json({ error: error.message });
-      }
-      return res.json({
-        url: result.secure_url,
-        public_id: result.public_id,
-        format: result.format,
-        width: result.width,
-        height: result.height,
-      });
-    }
-  );
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  })
+);
+app.disable('x-powered-by');
 
-  uploadStream.end(req.file.buffer);
+// ─── SEC-007: Strict CORS Origin Allowlist ────────────────────────────────────
+// Only exact-match origins are permitted. No wildcard patterns, no substrings.
+const allowedOrigins = new Set(
+  [
+    process.env.FRONTEND_URL,        // Production: https://shivangi-mobile.vercel.app
+    'http://localhost:5173',         // Vite dev server
+    'http://localhost:3000',         // Alt dev port
+    'http://127.0.0.1:5173',
+  ].filter(Boolean)
+);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (Postman, health checks, server-to-server)
+      if (!origin) return callback(null, false);
+      if (allowedOrigins.has(origin)) return callback(null, true);
+      // Block all other origins — do NOT silently allow
+      callback(new Error(`CORS: Origin '${origin}' is not permitted.`));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
+
+// ─── Body Parsing ─────────────────────────────────────────────────────────────
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+// ─── SEC-014: NoSQL Injection Prevention ─────────────────────────────────────
+// Sanitizes req.body, req.params, req.query by replacing $ and . in keys
+app.use(mongoSanitize());
+
+// ─── SEC-008: Rate Limiting ───────────────────────────────────────────────────
+const isDev = process.env.NODE_ENV !== 'production';
+
+// Global limit: 150 req/15min in production, 2000 in dev
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: isDev ? 2000 : 150,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please try again in 15 minutes.' },
 });
 
-// --- ORDERS API ---
-
-// 1. Get all orders
-app.get('/api/orders', async (req, res) => {
-  try {
-    const orders = await Order.find().sort({ createdAt: -1 });
-    res.json(orders);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+// Strict limit for file uploads: 10 uploads per hour per IP (100 in dev)
+const uploadLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: isDev ? 100 : 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Upload limit reached. Please try again in 1 hour.' },
 });
 
-// 2. Create or sync order
-app.post('/api/orders', async (req, res) => {
-  try {
-    const orderData = req.body;
-    if (!orderData || !orderData.id) {
-      return res.status(400).json({ error: 'Valid order data with id is required' });
-    }
-
-    const order = await Order.findOneAndUpdate(
-      { id: orderData.id },
-      { $set: orderData },
-      { new: true, upsert: true, setDefaultsOnInsert: true }
-    );
-
-    console.log(`[Order API] Synced order: ${order.id}`);
-    res.status(201).json(order);
-  } catch (error) {
-    console.error('[Order API Error]', error);
-    res.status(500).json({ error: error.message });
-  }
+// Order submission limit: 10 orders per hour per IP (100 in dev)
+const orderLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: isDev ? 100 : 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Order submission limit reached. Please contact the store for assistance.' },
 });
 
-// 3. Update order status and payment
-app.patch('/api/orders/:id/status', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status, paymentStatus, statusMessage } = req.body;
-
-    const updateFields = {};
-    if (status) updateFields.status = status;
-    if (paymentStatus) updateFields.paymentStatus = paymentStatus;
-    if (statusMessage) updateFields.statusMessage = statusMessage;
-
-    const updatedOrder = await Order.findOneAndUpdate(
-      { id },
-      { $set: updateFields },
-      { new: true }
-    );
-
-    if (!updatedOrder) {
-      return res.status(404).json({ error: 'Order not found' });
-    }
-
-    console.log(`[Order API] Updated order ${id} status: ${status} | payment: ${paymentStatus}`);
-    res.json(updatedOrder);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+// Auth brute-force protection: 10 login attempts per 15 minutes per IP (100 in dev)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: isDev ? 100 : 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
+  skipSuccessfulRequests: true,
 });
 
-// --- PRODUCTS API ---
+if (!isDev) {
+  app.use('/api/', globalLimiter);
+  app.use('/api/upload', uploadLimiter);
+  app.use('/api/orders', orderLimiter);
+  app.use('/api/auth', authLimiter);
+}
 
-// 1. Get all products
-app.get('/api/products', async (req, res) => {
-  try {
-    const products = await Product.find().sort({ createdAt: -1 });
-    res.json(products);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+// ─── Health Check (public, no auth) ──────────────────────────────────────────
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    service: 'Shivangi Mobile Backend',
+    environment: process.env.NODE_ENV || 'development',
+    time: new Date().toISOString(),
+  });
 });
 
-// 2. Create / Upsert Product
-app.post('/api/products', async (req, res) => {
-  try {
-    const productData = req.body;
-    if (!productData || !productData.id) {
-      return res.status(400).json({ error: 'Product id is required' });
-    }
+// ─── MVC API Routes ───────────────────────────────────────────────────────────
+app.use('/api/auth', authRoutes);         // Admin login/logout/verify
+app.use('/api/products', productRoutes);  // GET: public | POST/DELETE: requireAdmin
+app.use('/api/orders', orderRoutes);      // POST: public | GET/PATCH: requireAdmin
+app.use('/api/upload', uploadRoutes);     // POST: requireAdmin
+app.use('/api/settings', settingRoutes);  // GET: public | POST: requireAdmin
 
-    const product = await Product.findOneAndUpdate(
-      { id: productData.id },
-      { $set: productData },
-      { new: true, upsert: true }
-    );
+// ─── Error Handling ───────────────────────────────────────────────────────────
+app.use(notFound);
+app.use(errorHandler);
 
-    res.status(201).json(product);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// 3. Delete Product
-app.delete('/api/products/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    await Product.findOneAndDelete({ id });
-    res.json({ message: 'Product deleted successfully', id });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
+// ─── Start Server ─────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(`[Shivangi Mobile Server] Running on http://localhost:${PORT}`);
+  console.log(`[Shivangi Mobile] Server running on port ${PORT} (${process.env.NODE_ENV || 'development'})`);
+  console.log(`[Health check] http://localhost:${PORT}/api/health`);
 });
+
+export default app;

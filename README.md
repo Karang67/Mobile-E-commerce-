@@ -63,8 +63,8 @@ Recreates the store locator screenshots:
 - Breadcrumb: `Home > Store locations`
 - Interactive **Leaflet OpenStreetMap** with custom red map markers
 - Search input: *"Search for Outlets here.."* by city, area, or name
-- State filter pills (Andhra Pradesh, Telangana, Tamil Nadu)
-- Store listing cards for Adoni, Amalapuram, Anakapalli, Vijayawada, Visakhapatnam, Hyderabad, Rajahmundry, Guntur, Tirupati, and Chennai with direct Google Maps **Get Directions** links, phone, email, and store timings
+- State filter pills (Rajasthan, Telangana, Tamil Nadu)
+- Store listing cards for Sumerpur, Amalapuram, Anakapalli, Vijayawada, Visakhapatnam, Hyderabad, Rajahmundry, Guntur, Tirupati, and Chennai with direct Google Maps **Get Directions** links, phone, email, and store timings
 
 ### 7. Cart & Multi-Step Checkout Flow
 - **Cart (`/cart`)**: Real-time quantity stepper, item removal, move to wishlist, subtotal calculations, and working coupon codes:

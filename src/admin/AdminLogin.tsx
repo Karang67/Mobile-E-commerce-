@@ -1,23 +1,33 @@
 import React, { useState } from 'react';
 import { adminLogin, isAdminLoggedIn } from '../data/adminData';
-import { ShieldCheck, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { ShieldCheck, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
 
 interface Props {
   onSuccess: () => void;
 }
 
+// SEC-003 FIX: AdminLogin now calls the backend via adminLogin() (async fetch),
+// which returns a JWT that is verified server-side on every subsequent request.
+// The hardcoded password 'vinod67@' and localStorage session flag are removed.
 export const AdminLogin: React.FC<Props> = ({ onSuccess }) => {
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const [shaking, setShaking] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (adminLogin(password)) {
+    setError('');
+    setLoading(true);
+
+    const result = await adminLogin(password);
+    setLoading(false);
+
+    if (result.success) {
       onSuccess();
     } else {
-      setError('Incorrect password. Please try again.');
+      setError(result.error || 'Login failed. Please check your password.');
       setShaking(true);
       setTimeout(() => setShaking(false), 600);
       setPassword('');
@@ -32,11 +42,13 @@ export const AdminLogin: React.FC<Props> = ({ onSuccess }) => {
       >
         {/* Header */}
         <div className="bg-gradient-to-r from-[#E30613] to-[#c40510] px-8 py-7 text-white text-center">
-          <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
-            <ShieldCheck className="w-7 h-7 text-white" />
-          </div>
-          <h1 className="text-xl font-black tracking-wide">Admin Panel</h1>
-          <p className="text-red-100 text-xs mt-1">Shivangi Mobile — Store Management</p>
+          <img
+            src="/images/logo.png"
+            alt="Shivangi Mobile Sumerpur"
+            className="w-16 h-16 object-contain rounded-full bg-white p-1 shadow-lg border-2 border-white/80 mx-auto mb-3"
+          />
+          <h1 className="text-xl font-black tracking-wide">Admin Portal</h1>
+          <p className="text-red-100 text-xs mt-1">Shivangi Mobile — Sumerpur (Rajasthan)</p>
         </div>
 
         {/* Form */}
@@ -54,6 +66,7 @@ export const AdminLogin: React.FC<Props> = ({ onSuccess }) => {
                 className="w-full border border-gray-300 rounded-xl px-4 py-3 pr-11 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#E30613] focus:border-transparent"
                 autoFocus
                 required
+                disabled={loading}
               />
               <button
                 type="button"
@@ -74,9 +87,17 @@ export const AdminLogin: React.FC<Props> = ({ onSuccess }) => {
 
           <button
             type="submit"
-            className="w-full bg-[#E30613] hover:bg-[#c40510] text-white font-bold py-3 rounded-xl transition-colors shadow-md text-sm"
+            disabled={loading}
+            className="w-full bg-[#E30613] hover:bg-[#c40510] disabled:opacity-60 text-white font-bold py-3 rounded-xl transition-colors shadow-md text-sm flex items-center justify-center gap-2"
           >
-            Login to Admin
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Verifying…
+              </>
+            ) : (
+              'Login to Admin'
+            )}
           </button>
 
           <p className="text-center text-[11px] text-gray-400">

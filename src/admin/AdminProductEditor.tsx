@@ -7,15 +7,12 @@ import {
   BatteryCharging, Check, Star, RefreshCw
 } from 'lucide-react';
 import { useStoreData } from '../context/StoreDataContext';
+import { useToast } from '../context/ToastContext';
 import { Product, ProductCategory } from '../types';
 import { compressImageFile } from '../utils/imageCompressor';
 import { uploadToCloudinary } from '../utils/cloudinaryService';
 import { syncProductToMongo } from '../utils/apiService';
-
-const CATEGORIES: ProductCategory[] = [
-  'smartphones', 'tablets', 'laptops', 'smartwatches',
-  'earbuds', 'accessories', 'powerbanks', 'speakers'
-];
+import { addCustomCategory } from '../data/adminData';
 
 const TABS = ['Basic', 'Pricing', 'Stock', '2nd Hand', 'Images', 'Variants', 'Flags', 'EMI', 'Specs', 'Highlights', 'Related'] as const;
 type Tab = typeof TABS[number];
@@ -85,11 +82,14 @@ export const AdminProductEditor: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const isNew = !id || id === 'new';
-  const { products, refresh } = useStoreData();
+  const { products, categories, refresh } = useStoreData();
+  const { showToast } = useToast();
 
   const [activeTab, setActiveTab] = useState<Tab>('Basic');
   const [saved, setSaved] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
 
   const defaultForm = (): ProductWithEmi => ({
     id: `prod-${Date.now()}`,
@@ -130,6 +130,28 @@ export const AdminProductEditor: React.FC = () => {
   });
 
   const [form, setForm] = useState<ProductWithEmi>(defaultForm());
+
+  const allCategoryOptions = React.useMemo(() => {
+    const list = [...categories];
+    if (form.category && !list.some(c => c.id.toLowerCase() === form.category.toLowerCase() || c.name.toLowerCase() === form.category.toLowerCase())) {
+      const cap = form.category.charAt(0).toUpperCase() + form.category.slice(1);
+      list.push({
+        id: form.category.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        name: cap,
+        isCustom: true,
+      });
+    }
+    return list;
+  }, [categories, form.category]);
+
+  const handleCreateCategory = () => {
+    if (!newCategoryName.trim()) return;
+    const added = addCustomCategory(newCategoryName.trim());
+    setForm(prev => ({ ...prev, category: added.id as ProductCategory }));
+    setNewCategoryName('');
+    setShowAddCategory(false);
+    refresh();
+  };
 
   useEffect(() => {
     if (!isNew && products.length > 0) {
@@ -228,11 +250,16 @@ export const AdminProductEditor: React.FC = () => {
     };
     
     // Sync to MongoDB backend & Local Storage
-    await syncProductToMongo(toSave as Product);
+    const synced = await syncProductToMongo(toSave as Product);
     refresh();
 
     setSaved(true);
-    setTimeout(() => { setSaved(false); navigate('/admin/products'); }, 1200);
+    if (!synced) {
+      showToast('Saved locally in browser, but could not sync to MongoDB. Ensure backend server is running ("npm run server").', 'error');
+    } else {
+      showToast('Product saved and synced to cloud database!', 'success');
+    }
+    setTimeout(() => { setSaved(false); navigate('/admin/products'); }, 1500);
   };
 
   // ─── Tab content rendered inline (no inner components) ────────────────────
@@ -263,13 +290,64 @@ export const AdminProductEditor: React.FC = () => {
                 />
               </div>
               <div>
-                <label className={lbl}>Category *</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className={lbl}>Category *</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddCategory(!showAddCategory)}
+                    className="text-xs font-bold text-[#E30613] hover:underline flex items-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>{showAddCategory ? 'Cancel' : '+ Add Custom Category'}</span>
+                  </button>
+                </div>
+
+                {showAddCategory && (
+                  <div className="p-3 mb-2.5 rounded-xl bg-gray-900 border border-gray-700/80 space-y-2">
+                    <p className="text-[11px] text-gray-400">Enter a new category name (e.g. Smart TV, Gaming, Drones):</p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        className={inp}
+                        placeholder="e.g. Smart TV"
+                        value={newCategoryName}
+                        onChange={e => setNewCategoryName(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleCreateCategory();
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleCreateCategory}
+                        className="px-4 py-2.5 bg-[#E30613] hover:bg-[#c40510] text-white text-xs font-bold rounded-xl shrink-0 transition-colors shadow-sm"
+                      >
+                        Create
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <select
                   className={inp}
                   value={form.category}
-                  onChange={e => setField('category', e.target.value as ProductCategory)}
+                  onChange={e => {
+                    if (e.target.value === '__add_new__') {
+                      setShowAddCategory(true);
+                    } else {
+                      setField('category', e.target.value as ProductCategory);
+                    }
+                  }}
                 >
-                  {CATEGORIES.map(c => <option key={c} value={c} className="capitalize">{c}</option>)}
+                  {allCategoryOptions.map(c => (
+                    <option key={c.id} value={c.id} className="capitalize">
+                      {c.name} {c.isCustom ? '★ (Custom)' : ''}
+                    </option>
+                  ))}
+                  <option value="__add_new__" className="text-[#E30613] font-bold">
+                    + Add New Custom Category...
+                  </option>
                 </select>
               </div>
               <div>

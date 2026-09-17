@@ -37,31 +37,36 @@ export const Footer: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4">
         {/* Centered Brand Logo & Tagline */}
         <div className="flex flex-col items-center justify-center text-center pb-8 border-b border-gray-700/60">
-          <Link to="/" className="flex items-center gap-2.5 mb-2">
-            <div className="bg-[#E30613] text-white font-black text-2xl px-3 py-1 rounded shadow-sm">
-              <span>S</span>
-            </div>
+          <Link to="/" className="flex items-center gap-3 mb-2">
+            <img 
+              src="/images/logo.png" 
+              alt="Shivangi Mobile Sumerpur" 
+              className="w-16 h-16 object-contain rounded-full bg-white p-1 shadow-lg border-2 border-white/80"
+            />
             <div className="text-left">
               <span className="text-2xl font-black tracking-wide text-white uppercase block leading-none">
-                {brandName}
+                Shivangi Mobile
               </span>
-              <span className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold">
-                Mobiles & Electronics
+              <span className="text-[11px] text-gray-300 uppercase tracking-wider font-bold mt-1 block">
+                Sumerpur · सेल्स एण्ड सर्विस
               </span>
             </div>
           </Link>
 
-          {/* Store Count Badge */}
-          <div className="inline-flex items-center gap-2 bg-[#283747] text-white px-4 py-1.5 rounded-full text-xs font-bold tracking-wider mt-2 border border-gray-600/50">
+          {/* Hindi Slogan from Card */}
+          <div className="mt-2 text-sm md:text-base font-bold text-amber-300 tracking-wide font-serif">
+            ॥ आपकी अपनी दुकान, शिवांगी मोबाईल है तो अपनापन है ॥
+          </div>
+
+          {/* Store Location Badge */}
+          <div className="inline-flex items-center gap-2 bg-[#283747] text-white px-4 py-1.5 rounded-full text-xs font-bold tracking-wider mt-2.5 border border-gray-600/50">
             <MapPin className="w-3.5 h-3.5 text-[#E30613]" />
-            <span>{storeTagline}</span>
+            <span>Opp. Nagraj Electronic, Main Bazar, Sumerpur - 306902</span>
           </div>
 
           <p className="text-xs text-gray-400 max-w-xl mt-3 leading-relaxed">
-            South India’s most trusted multi-brand mobile and smart gadgets retail network with 250+ outlets across Andhra Pradesh, Telangana, and Tamil Nadu.
+            Wholesaler Dealer in all type Mobiles & Accessories · Sales & Service · Instant exchange, authentic warranties, and authorized service support.
           </p>
-
-
         </div>
 
         {/* Desktop 5-Column Navigation Grid */}
@@ -130,7 +135,7 @@ export const Footer: React.FC = () => {
             <ul className="space-y-2.5">
               <li><Link to="/payment-methods" className="hover:text-white transition-colors">Payment Methods</Link></li>
               <li><Link to="/shipping" className="hover:text-white transition-colors">Store Pickup Guide</Link></li>
-              <li><Link to="/stores" className="hover:text-white transition-colors">Adoni Store Location</Link></li>
+              <li><Link to="/stores" className="hover:text-white transition-colors">Sumerpur Store Location</Link></li>
               <li><Link to="/offers" className="hover:text-white transition-colors">No Cost EMI Options</Link></li>
             </ul>
           </div>
@@ -228,7 +233,7 @@ export const Footer: React.FC = () => {
               <ul className="pt-3 pb-1 space-y-2 text-gray-400 pl-2">
                 <li><Link to="/payment-methods" className="hover:text-white">Payment Methods</Link></li>
                 <li><Link to="/shipping" className="hover:text-white">Store Pickup Guide</Link></li>
-                <li><Link to="/stores" className="hover:text-white">Adoni Store Location</Link></li>
+                <li><Link to="/stores" className="hover:text-white">Sumerpur Store Location</Link></li>
                 <li><Link to="/offers" className="hover:text-white">No Cost EMI Options</Link></li>
               </ul>
             )}
@@ -240,11 +245,11 @@ export const Footer: React.FC = () => {
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 text-gray-300">
             <div className="flex items-center gap-2">
               <Phone className="w-4 h-4 text-[#E30613]" />
-              <span>Customer Care: <strong>+91 1800 123 4567</strong></span>
+              <span>Mobile / WhatsApp: <strong>+91 7841976969</strong> · <strong>+91 9860695357</strong></span>
             </div>
             <div className="flex items-center gap-2">
               <Mail className="w-4 h-4 text-[#0796D2]" />
-              <span>Support Email: <strong>support@shivangimobile.com</strong></span>
+              <span>Email: <strong>Boranavinod89@gmail.com</strong></span>
             </div>
           </div>
 
@@ -271,11 +276,11 @@ export const Footer: React.FC = () => {
 
         {/* Bottom Copyright & Disclaimer */}
         <div className="pt-6 border-t border-gray-700/40 text-center text-xs text-gray-400 flex flex-col md:flex-row items-center justify-between gap-2">
-          <p>© 2026 {brandName} Demo Store. All Rights Reserved.</p>
-          <Link to="/admin" className="text-gray-400 hover:text-white font-semibold hover:underline flex items-center gap-1.5 transition-colors">
+          <p className="text-center text-white">© {new Date().getFullYear()} {brandName} All Rights Reserved.</p>
+          {/* <Link to="/admin" className="text-gray-400 hover:text-white font-semibold hover:underline flex items-center gap-1.5 transition-colors">
             <ShieldCheck className="w-3.5 h-3.5 text-[#E30613]" />
             <span>Admin Login</span>
-          </Link>
+          // </Link> */}
         </div>
       </div>
     </footer>

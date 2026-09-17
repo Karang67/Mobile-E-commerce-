@@ -1,8 +1,23 @@
 import { Order, Product } from '../types';
 import { seedProducts } from '../data/seedProducts';
+import { getAdminToken } from '../data/adminData';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 const LOCAL_PRODUCTS_KEY = 'admin_products';
+
+/**
+ * Returns common headers including Authorization Bearer token when admin is logged in
+ */
+const getAuthHeaders = (): Record<string, string> => {
+  const token = getAdminToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+};
 
 /**
  * Get products stored in localStorage
@@ -76,15 +91,13 @@ export const syncOrderToMongo = async (order: Order): Promise<boolean> => {
 };
 
 /**
- * Update order status in MongoDB backend
+ * Update order status in MongoDB backend (Admin protected)
  */
 export const syncOrderStatusToMongo = async (orderId: string, status: string, paymentStatus?: string): Promise<boolean> => {
   try {
     const res = await fetch(`${API_BASE_URL}/orders/${orderId}/status`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ status, paymentStatus }),
     });
 
@@ -98,7 +111,7 @@ export const syncOrderStatusToMongo = async (orderId: string, status: string, pa
 };
 
 /**
- * Sync a product to MongoDB backend AND localStorage
+ * Sync a product to MongoDB backend AND localStorage (Admin protected)
  */
 export const syncProductToMongo = async (product: Product): Promise<boolean> => {
   // Always save locally first so client state updates immediately
@@ -107,9 +120,7 @@ export const syncProductToMongo = async (product: Product): Promise<boolean> => 
   try {
     const res = await fetch(`${API_BASE_URL}/products`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(product),
     });
 
@@ -124,13 +135,18 @@ export const syncProductToMongo = async (product: Product): Promise<boolean> => 
 };
 
 /**
- * Delete a product from MongoDB backend AND localStorage
+ * Delete a product from MongoDB backend AND localStorage (Admin protected)
  */
 export const deleteProductFromMongo = async (productId: string): Promise<boolean> => {
   deleteLocalProduct(productId);
   try {
+    const token = getAdminToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
     const res = await fetch(`${API_BASE_URL}/products/${productId}`, {
       method: 'DELETE',
+      headers,
     });
 
     if (res.ok) {
@@ -152,30 +168,31 @@ export const getProducts = async (): Promise<Product[]> => {
   try {
     const res = await fetch(`${API_BASE_URL}/products`);
     if (res.ok) {
-      apiProducts = await res.json();
+      const data = await res.json();
+      apiProducts = Array.isArray(data) ? data : (data.products || []);
     }
   } catch (error) {
     console.error('[API] Error fetching products:', error);
   }
 
   // Combine products logic:
-  // If API returned products, merge them with local products (avoiding duplicates)
-  // If API returned empty (e.g. database not seeded yet), combine seedProducts + localProducts
-  let baseList = apiProducts.length > 0 ? apiProducts : seedProducts;
-  
+  // Base with seedProducts, then overlay MongoDB apiProducts and localStorage products
   const mergedMap = new Map<string, Product>();
-  baseList.forEach(p => mergedMap.set(p.id, p));
+  seedProducts.forEach(p => mergedMap.set(p.id, p));
+  apiProducts.forEach(p => mergedMap.set(p.id, p));
   local.forEach(p => mergedMap.set(p.id, p));
 
   return Array.from(mergedMap.values());
 };
 
 /**
- * Fetch all orders from MongoDB backend
+ * Fetch all orders from MongoDB backend (Admin protected)
  */
 export const getOrders = async (): Promise<Order[]> => {
   try {
-    const res = await fetch(`${API_BASE_URL}/orders`);
+    const res = await fetch(`${API_BASE_URL}/orders`, {
+      headers: getAuthHeaders(),
+    });
     if (res.ok) {
       return await res.json();
     }
@@ -184,3 +201,34 @@ export const getOrders = async (): Promise<Order[]> => {
   }
   return [];
 };
+
+/**
+ * Delete a single order from MongoDB backend (Admin protected)
+ */
+export const deleteOrderFromMongo = async (orderId: string): Promise<boolean> => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Clear all orders from MongoDB backend (Admin protected)
+ */
+export const clearAllOrdersFromMongo = async (): Promise<boolean> => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/orders`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+};
+

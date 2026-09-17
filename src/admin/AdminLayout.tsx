@@ -17,7 +17,8 @@ import {
   Clock,
   CheckCircle2,
   Trash2,
-  Truck
+  Truck,
+  QrCode
 } from 'lucide-react';
 import { adminLogout } from '../data/adminData';
 import { 
@@ -31,6 +32,7 @@ import {
 const navItems = [
   { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/admin/inquiries', icon: Truck, label: 'Orders & Deliveries' },
+  { to: '/admin/payment', icon: QrCode, label: 'QR Scanner & Payment' },
   { to: '/admin/products', icon: Package, label: 'Products' },
   { to: '/admin/offers', icon: Tag, label: 'Offers & Banners' },
   { to: '/admin/store', icon: Store, label: 'Store Info' },
@@ -61,8 +63,8 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const handleLogout = () => {
-    adminLogout();
+  const handleLogout = async () => {
+    await adminLogout();
     navigate('/admin');
     window.location.reload();
   };
@@ -71,11 +73,15 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="px-5 py-5 border-b border-gray-700/60">
-        <div className="flex items-center gap-2.5">
-          <div className="bg-[#E30613] text-white font-black text-lg px-2 py-0.5 rounded">S</div>
+        <div className="flex items-center gap-3">
+          <img 
+            src="/images/logo.png" 
+            alt="Shivangi Mobile Sumerpur" 
+            className="w-10 h-10 object-contain rounded-full bg-white p-0.5 shadow-md border border-white/80 shrink-0"
+          />
           <div>
             <div className="text-white font-black text-sm leading-tight">Shivangi Mobile</div>
-            <div className="text-gray-400 text-[10px] uppercase tracking-widest">Admin Panel</div>
+            <div className="text-gray-400 text-[10px] uppercase tracking-wider font-semibold">Sumerpur · Admin</div>
           </div>
         </div>
       </div>

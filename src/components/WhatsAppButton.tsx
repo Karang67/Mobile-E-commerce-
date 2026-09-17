@@ -7,8 +7,8 @@ export const WhatsAppButton: React.FC = () => {
   const [showTooltip, setShowTooltip] = useState(false);
 
   const handleClick = () => {
-    const text = encodeURIComponent(`Hi ${brandName}, I need assistance with smartphone deals and in-store availability!`);
-    window.open(`https://wa.me/919876543210?text=${text}`, '_blank');
+    const text = encodeURIComponent(`Hi ${brandName} (Sumerpur), I need assistance with smartphone deals and in-store availability!`);
+    window.open(`https://wa.me/917841976969?text=${text}`, '_blank');
   };
 
   return (

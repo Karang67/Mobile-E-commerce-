@@ -16,6 +16,8 @@ export interface AdminInquiryNotification {
   total: number;
   paymentMethod: string;
   paymentStatus: 'Pending' | 'Verified' | 'Success' | 'COD';
+  paymentScreenshot?: string;
+  transactionId?: string;
   status: OrderStatus;
   createdAt: string;
   read: boolean;
@@ -83,7 +85,28 @@ export const markAllNotificationsAsRead = (): void => {
 export const clearAdminNotifications = (): void => {
   try {
     localStorage.removeItem(NOTIFICATIONS_STORAGE_KEY);
+    localStorage.removeItem(ORDERS_STORAGE_KEY);
     window.dispatchEvent(new Event('shivangi_notifications_updated'));
+    window.dispatchEvent(new Event('shivangi_orders_updated'));
+  } catch {
+    // ignore
+  }
+};
+
+export const deleteAdminNotification = (idOrInquiryId: string): void => {
+  try {
+    const list = getAdminNotifications().filter(n => n.id !== idOrInquiryId && n.inquiryId !== idOrInquiryId);
+    localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(list));
+
+    const raw = localStorage.getItem(ORDERS_STORAGE_KEY);
+    if (raw) {
+      const orders: Order[] = JSON.parse(raw);
+      const filtered = orders.filter(o => o.id !== idOrInquiryId);
+      localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(filtered));
+    }
+
+    window.dispatchEvent(new Event('shivangi_notifications_updated'));
+    window.dispatchEvent(new Event('shivangi_orders_updated'));
   } catch {
     // ignore
   }
@@ -102,7 +125,7 @@ export const getStatusMessage = (status: OrderStatus): string => {
     case 'Delivered':
       return 'Your order has been delivered successfully. Thank you for shopping with Shivangi Mobile!';
     case 'Ready for Pickup':
-      return 'Your order is ready for collection at our Adoni store counter.';
+      return 'Your order is ready for collection at our Sumerpur store counter.';
     case 'Completed':
       return 'Order fulfilled successfully.';
     default:
@@ -111,8 +134,8 @@ export const getStatusMessage = (status: OrderStatus): string => {
 };
 
 export const updateCustomerOrderStatus = (
-  orderId: string, 
-  newStatus: OrderStatus, 
+  orderId: string,
+  newStatus: OrderStatus,
   paymentStatus?: 'Pending' | 'Verified' | 'Success' | 'COD',
   customMessage?: string
 ): void => {

@@ -76,16 +76,20 @@ export const Header: React.FC = () => {
       <header className="hidden lg:block bg-[#E30613] text-white shadow-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-6">
           {/* Brand Logo */}
-          <Link to="/" className="flex items-center gap-2 shrink-0 group">
-            <div className="bg-white text-[#E30613] font-black text-2xl px-2.5 py-0.5 rounded shadow-sm tracking-tight flex items-center justify-center">
-              <span>S</span>
-            </div>
+          <Link to="/" className="flex items-center gap-3 shrink-0 group">
+            <img 
+              src="/images/logo.png" 
+              alt="Shivangi Mobile Sumerpur" 
+              className="w-12 h-12 object-contain rounded-full bg-white p-0.5 shadow-md border-2 border-white/80 group-hover:scale-105 transition-transform"
+            />
             <div className="flex flex-col">
-              <span className="text-xl font-extrabold tracking-wide uppercase leading-tight group-hover:text-red-100 transition-colors">
-                {brandName}
+              <span className="text-xl font-black tracking-wide uppercase leading-tight group-hover:text-red-100 transition-colors">
+                Shivangi Mobile
               </span>
-              <span className="text-[10px] tracking-widest text-red-100 uppercase font-semibold">
-                Mobiles & Electronics
+              <span className="text-[10px] tracking-wider text-red-100 uppercase font-bold flex items-center gap-1">
+                <span>SUMERPUR</span>
+                <span className="opacity-60">·</span>
+                <span className="text-[9px] font-normal tracking-normal text-white/90">सेल्स एण्ड सर्विस</span>
               </span>
             </div>
           </Link>
@@ -318,16 +322,18 @@ export const Header: React.FC = () => {
           </button>
 
           {/* Centered Brand Logo */}
-          <Link to="/" className="flex items-center gap-1.5">
-            <div className="bg-white text-[#E30613] font-black text-xl px-2 py-0.5 rounded shadow-sm">
-              <span>S</span>
-            </div>
+          <Link to="/" className="flex items-center gap-2">
+            <img 
+              src="/images/logo.png" 
+              alt="Shivangi Mobile" 
+              className="w-9 h-9 object-contain rounded-full bg-white p-0.5 shadow-sm border border-white/80"
+            />
             <div className="flex flex-col text-left">
-              <span className="text-lg font-black tracking-wide uppercase leading-none">
-                {brandName}
+              <span className="text-base font-black tracking-wide uppercase leading-none">
+                Shivangi Mobile
               </span>
-              <span className="text-[8px] font-bold text-red-100 uppercase tracking-widest leading-none mt-0.5">
-                Mobiles & More
+              <span className="text-[9px] font-bold text-red-100 uppercase tracking-wider leading-none mt-0.5">
+                Sumerpur · Sales & Service
               </span>
             </div>
           </Link>

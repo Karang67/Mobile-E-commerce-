@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { 
-  Star, 
-  Heart, 
-  Scale, 
-  ShoppingCart, 
-  Zap, 
-  ShieldCheck, 
-  Bell, 
-  Clock, 
-  Truck, 
+import {
+  Star,
+  Heart,
+  Scale,
+  ShoppingCart,
+  Zap,
+  ShieldCheck,
+  Bell,
+  Clock,
+  Truck,
   RotateCcw,
   CheckCircle2,
   AlertCircle,
@@ -46,7 +46,7 @@ export const ProductDetailPage: React.FC = () => {
   const [quantity, setQuantity] = useState(1);
   const [selectedColor, setSelectedColor] = useState(product.colorVariants?.[0]?.name || product.color || '');
   const [selectedStorage, setSelectedStorage] = useState(product.storageVariants?.[0] || product.storage || '');
-  
+
   // Modals for out-of-stock actions
   const [notifyModalOpen, setNotifyModalOpen] = useState(false);
   const [notifyMode, setNotifyMode] = useState<'stock' | 'price'>('stock');
@@ -60,7 +60,7 @@ export const ProductDetailPage: React.FC = () => {
         title: product.name,
         text: `Check out ${product.name} on Shivangi Mobile!`,
         url: window.location.href,
-      }).catch(() => {});
+      }).catch(() => { });
     } else {
       navigator.clipboard.writeText(window.location.href);
       showToast('Product link copied to clipboard!', 'info');
@@ -127,7 +127,7 @@ export const ProductDetailPage: React.FC = () => {
             <div className="flex flex-col items-center gap-1">
               <Clock className="w-5 h-5 text-[#0796D2]" />
               <span className="font-semibold text-gray-800">Store Pickup</span>
-              <span className="text-[10px] text-gray-400">Shivangi Mobile, Adoni</span>
+              <span className="text-[10px] text-gray-400">Shivangi Mobile, Sumerpur</span>
             </div>
             <div className="flex flex-col items-center gap-1">
               <RotateCcw className="w-5 h-5 text-purple-600" />
@@ -258,7 +258,7 @@ export const ProductDetailPage: React.FC = () => {
               )}
             </div>
             <p className="text-[11px] text-gray-500 mt-1">
-              Inclusive of all taxes. Free instant store pickup at Adoni.
+              Inclusive of all taxes. Free instant store pickup at Sumerpur.
             </p>
 
             {/* Stock status indicator */}
@@ -266,7 +266,7 @@ export const ProductDetailPage: React.FC = () => {
               {product.inStock ? (
                 <div className="flex items-center gap-1.5 text-emerald-700 font-bold text-xs">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span>IN STOCK • Ready for Instant In-Store Pickup at Adoni Store</span>
+                  <span>IN STOCK • Ready for Instant In-Store Pickup at Sumerpur Store</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
@@ -292,11 +292,10 @@ export const ProductDetailPage: React.FC = () => {
                   <button
                     key={v.name}
                     onClick={() => setSelectedColor(v.name)}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
-                      selectedColor === v.name
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${selectedColor === v.name
                         ? 'border-[#E30613] bg-red-50 text-[#E30613] ring-1 ring-[#E30613]'
                         : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-                    }`}
+                      }`}
                   >
                     {v.hex && (
                       <span
@@ -322,11 +321,10 @@ export const ProductDetailPage: React.FC = () => {
                   <button
                     key={st}
                     onClick={() => setSelectedStorage(st)}
-                    className={`px-3.5 py-1.5 rounded-lg border text-xs font-bold uppercase transition-all ${
-                      selectedStorage === st
+                    className={`px-3.5 py-1.5 rounded-lg border text-xs font-bold uppercase transition-all ${selectedStorage === st
                         ? 'border-[#E30613] bg-[#E30613] text-white shadow-xs'
                         : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-                    }`}
+                      }`}
                   >
                     {st}
                   </button>
@@ -377,11 +375,10 @@ export const ProductDetailPage: React.FC = () => {
                 <div className="flex items-center gap-3 pt-1">
                   <button
                     onClick={() => toggleWishlist(product)}
-                    className={`flex-1 py-2 px-3 rounded-lg border text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${
-                      isWishlisted
+                    className={`flex-1 py-2 px-3 rounded-lg border text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${isWishlisted
                         ? 'bg-red-50 border-[#E30613] text-[#E30613]'
                         : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-current text-[#E30613]' : ''}`} />
                     <span>{isWishlisted ? 'In Wishlist' : 'Add to Wishlist'}</span>
@@ -389,11 +386,10 @@ export const ProductDetailPage: React.FC = () => {
 
                   <button
                     onClick={() => addToCompare(product)}
-                    className={`flex-1 py-2 px-3 rounded-lg border text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${
-                      isCompared
+                    className={`flex-1 py-2 px-3 rounded-lg border text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${isCompared
                         ? 'bg-blue-50 border-[#0796D2] text-[#0796D2]'
                         : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     <Scale className="w-4 h-4" />
                     <span>{isCompared ? 'In Compare' : 'Add to Compare'}</span>
@@ -440,11 +436,10 @@ export const ProductDetailPage: React.FC = () => {
                 <div className="flex items-center gap-3 pt-1">
                   <button
                     onClick={() => toggleWishlist(product)}
-                    className={`flex-1 py-2 px-3 rounded-lg border text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${
-                      isWishlisted
+                    className={`flex-1 py-2 px-3 rounded-lg border text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${isWishlisted
                         ? 'bg-red-50 border-[#E30613] text-[#E30613]'
                         : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-current text-[#E30613]' : ''}`} />
                     <span>{isWishlisted ? 'In Wishlist' : 'Add to Wishlist'}</span>
@@ -452,11 +447,10 @@ export const ProductDetailPage: React.FC = () => {
 
                   <button
                     onClick={() => addToCompare(product)}
-                    className={`flex-1 py-2 px-3 rounded-lg border text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${
-                      isCompared
+                    className={`flex-1 py-2 px-3 rounded-lg border text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${isCompared
                         ? 'bg-blue-50 border-[#0796D2] text-[#0796D2]'
                         : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     <Scale className="w-4 h-4" />
                     <span>{isCompared ? 'In Compare' : 'Add to Compare'}</span>
@@ -473,10 +467,10 @@ export const ProductDetailPage: React.FC = () => {
             </div>
             <div>
               <h4 className="text-xs font-black text-gray-900 uppercase tracking-wide">
-                Available at Shivangi Mobile, Adoni
+                Available at Shivangi Mobile, Sumerpur
               </h4>
               <p className="text-[11px] text-gray-600 mt-0.5 leading-relaxed">
-                Municipal Complex, Bus Stand Road, Adoni. Walk in today for live demos, instant hands-on testing, and zero-waiting counter pickup.
+                Opp. Nagraj Electronic, Main Bazar, Sumerpur, Rajasthan - 306902. Walk in today for live demos, instant hands-on testing, and zero-waiting counter pickup.
               </p>
               <div className="mt-2 flex items-center gap-3 text-[11px] font-bold text-[#E30613]">
                 <span>✓ Pay at Store Accepted</span>

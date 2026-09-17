@@ -45,6 +45,7 @@ import { AdminOffers } from './admin/AdminOffers';
 import { AdminStore } from './admin/AdminStore';
 import { AdminSettings } from './admin/AdminSettings';
 import { AdminInquiries } from './admin/AdminInquiries';
+import { AdminPaymentSettings } from './admin/AdminPaymentSettings';
 
 // Scroll to top helper on route change
 const ScrollToTop: React.FC = () => {
@@ -68,6 +69,7 @@ const AdminApp: React.FC = () => (
               <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="/dashboard" element={<AdminDashboard />} />
               <Route path="/inquiries" element={<AdminInquiries />} />
+              <Route path="/payment" element={<AdminPaymentSettings />} />
               <Route path="/products" element={<AdminProductList />} />
               <Route path="/products/new" element={<AdminProductEditor />} />
               <Route path="/products/:id/edit" element={<AdminProductEditor />} />

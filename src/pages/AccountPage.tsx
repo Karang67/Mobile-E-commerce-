@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  User, 
-  Package, 
-  MapPin, 
-  Phone, 
-  Mail, 
-  CheckCircle2, 
-  Clock, 
+import {
+  User,
+  Package,
+  MapPin,
+  Phone,
+  Mail,
+  CheckCircle2,
+  Clock,
   ChevronRight,
   Store,
   Printer,
@@ -49,7 +49,7 @@ const DEFAULT_PROFILE: UserProfile = {
   fullName: 'Customer',
   email: '',
   phone: '',
-  city: 'Adoni',
+  city: 'Sumerpur',
   address: '',
   memberSince: '2025',
 };
@@ -112,8 +112,8 @@ export const AccountPage: React.FC = () => {
     fullName: profile.fullName,
     phone: profile.phone,
     pincode: '518301',
-    state: 'Andhra Pradesh',
-    city: 'Adoni',
+    state: 'Rajasthan',
+    city: 'Sumerpur',
     street: '',
     landmark: '',
     addressType: 'Home'
@@ -181,8 +181,8 @@ export const AccountPage: React.FC = () => {
       fullName: profile.fullName,
       phone: profile.phone,
       pincode: '518301',
-      state: 'Andhra Pradesh',
-      city: 'Adoni',
+      state: 'Rajasthan',
+      city: 'Sumerpur',
       street: '',
       landmark: '',
       addressType: 'Home'
@@ -300,11 +300,10 @@ export const AccountPage: React.FC = () => {
           <nav className="space-y-1.5 text-xs font-bold">
             <button
               onClick={() => setActiveTab('orders')}
-              className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition-all ${
-                activeTab === 'orders'
-                  ? 'bg-red-50 text-[#E30613] shadow-xs'
-                  : 'text-gray-700 hover:bg-gray-50'
-              }`}
+              className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition-all ${activeTab === 'orders'
+                ? 'bg-red-50 text-[#E30613] shadow-xs'
+                : 'text-gray-700 hover:bg-gray-50'
+                }`}
             >
               <div className="flex items-center gap-2.5">
                 <Truck className="w-4 h-4" />
@@ -317,11 +316,10 @@ export const AccountPage: React.FC = () => {
 
             <button
               onClick={() => setActiveTab('profile')}
-              className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition-all ${
-                activeTab === 'profile'
-                  ? 'bg-red-50 text-[#E30613] shadow-xs'
-                  : 'text-gray-700 hover:bg-gray-50'
-              }`}
+              className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition-all ${activeTab === 'profile'
+                ? 'bg-red-50 text-[#E30613] shadow-xs'
+                : 'text-gray-700 hover:bg-gray-50'
+                }`}
             >
               <div className="flex items-center gap-2.5">
                 <User className="w-4 h-4" />
@@ -332,11 +330,10 @@ export const AccountPage: React.FC = () => {
 
             <button
               onClick={() => setActiveTab('addresses')}
-              className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition-all ${
-                activeTab === 'addresses'
-                  ? 'bg-red-50 text-[#E30613] shadow-xs'
-                  : 'text-gray-700 hover:bg-gray-50'
-              }`}
+              className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition-all ${activeTab === 'addresses'
+                ? 'bg-red-50 text-[#E30613] shadow-xs'
+                : 'text-gray-700 hover:bg-gray-50'
+                }`}
             >
               <div className="flex items-center gap-2.5">
                 <MapPin className="w-4 h-4" />
@@ -349,11 +346,10 @@ export const AccountPage: React.FC = () => {
 
             <button
               onClick={() => setActiveTab('store')}
-              className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition-all ${
-                activeTab === 'store'
-                  ? 'bg-red-50 text-[#E30613] shadow-xs'
-                  : 'text-gray-700 hover:bg-gray-50'
-              }`}
+              className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl transition-all ${activeTab === 'store'
+                ? 'bg-red-50 text-[#E30613] shadow-xs'
+                : 'text-gray-700 hover:bg-gray-50'
+                }`}
             >
               <div className="flex items-center gap-2.5">
                 <Store className="w-4 h-4" />
@@ -363,18 +359,18 @@ export const AccountPage: React.FC = () => {
             </button>
           </nav>
 
-          {/* Quick Adoni Store Pickup Card */}
+          {/* Quick Sumerpur Store Pickup Card */}
           <div className="pt-3 border-t border-gray-100">
             <div className="bg-red-50/60 rounded-xl p-3.5 border border-red-100 text-xs">
               <div className="flex items-center gap-2 text-[#E30613] font-black uppercase text-[11px]">
                 <Store className="w-4 h-4" />
-                <span>Shivangi Mobile Adoni</span>
+                <span>Shivangi Mobile Sumerpur</span>
               </div>
               <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
-                Municipal Complex, Bus Stand Road, Adoni. Open daily 10 AM – 9:30 PM.
+                Opp. Nagraj Electronic, Main Bazar, Sumerpur, Rajasthan - 306902. Open daily 10 AM – 9:30 PM.
               </p>
-              <a 
-                href="tel:9876543210" 
+              <a
+                href="tel:9876543210"
                 className="mt-2 text-[11px] font-bold text-[#E30613] hover:underline flex items-center gap-1"
               >
                 <Phone className="w-3 h-3" /> Call: +91 98765 43210
@@ -420,7 +416,7 @@ export const AccountPage: React.FC = () => {
                   {orders.map(order => {
                     const isDelivery = order.fulfillmentType === 'delivery' || order.deliveryMethod?.toLowerCase().includes('delivery');
                     const isPaymentVerified = order.paymentStatus === 'Verified' || order.paymentStatus === 'Success';
-                    
+
                     const stages: OrderStatus[] = [
                       'Order Placed',
                       'Preparing',
@@ -465,7 +461,7 @@ export const AccountPage: React.FC = () => {
                             ) : (
                               <span className="text-xs bg-amber-50 text-amber-800 font-bold px-2.5 py-1 rounded-lg border border-amber-200 flex items-center gap-1.5">
                                 <Store className="w-3.5 h-3.5 text-amber-600" />
-                                <span>Store Pickup (Adoni)</span>
+                                <span>Store Pickup (Sumerpur)</span>
                               </span>
                             )}
 
@@ -489,17 +485,16 @@ export const AccountPage: React.FC = () => {
                         </div>
 
                         {/* 2. Real-Time Status Confirmation Banner */}
-                        <div className={`p-3.5 rounded-xl border text-xs flex items-start gap-3 ${
-                          order.status === 'Delivered' || order.status === 'Completed'
-                            ? 'bg-emerald-50/80 border-emerald-200 text-emerald-900'
-                            : order.status === 'Out for Delivery'
+                        <div className={`p-3.5 rounded-xl border text-xs flex items-start gap-3 ${order.status === 'Delivered' || order.status === 'Completed'
+                          ? 'bg-emerald-50/80 border-emerald-200 text-emerald-900'
+                          : order.status === 'Out for Delivery'
                             ? 'bg-purple-50/80 border-purple-200 text-purple-900'
                             : order.status === 'Packed'
-                            ? 'bg-indigo-50/80 border-indigo-200 text-indigo-900'
-                            : order.status === 'Preparing'
-                            ? 'bg-amber-50/80 border-amber-200 text-amber-900'
-                            : 'bg-red-50/70 border-red-200 text-red-900'
-                        }`}>
+                              ? 'bg-indigo-50/80 border-indigo-200 text-indigo-900'
+                              : order.status === 'Preparing'
+                                ? 'bg-amber-50/80 border-amber-200 text-amber-900'
+                                : 'bg-red-50/70 border-red-200 text-red-900'
+                          }`}>
                           <div className="shrink-0 mt-0.5">
                             {order.status === 'Delivered' || order.status === 'Completed' ? (
                               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
@@ -540,13 +535,12 @@ export const AccountPage: React.FC = () => {
                               return (
                                 <div key={stg} className="flex flex-col items-center">
                                   <div
-                                    className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold mb-1.5 transition-all shadow-xs ${
-                                      isCompleted
-                                        ? 'bg-emerald-600 text-white'
-                                        : isCurrent
+                                    className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold mb-1.5 transition-all shadow-xs ${isCompleted
+                                      ? 'bg-emerald-600 text-white'
+                                      : isCurrent
                                         ? 'bg-[#E30613] text-white ring-4 ring-red-100 animate-pulse'
                                         : 'bg-white text-gray-400 border border-gray-300'
-                                    }`}
+                                      }`}
                                   >
                                     {isCompleted ? (
                                       <Check className="w-3.5 h-3.5 text-white" />
@@ -555,13 +549,12 @@ export const AccountPage: React.FC = () => {
                                     )}
                                   </div>
                                   <span
-                                    className={`text-[10px] font-bold tracking-tight line-clamp-1 ${
-                                      isCurrent
-                                        ? 'text-[#E30613]'
-                                        : isCompleted
+                                    className={`text-[10px] font-bold tracking-tight line-clamp-1 ${isCurrent
+                                      ? 'text-[#E30613]'
+                                      : isCompleted
                                         ? 'text-emerald-700'
                                         : 'text-gray-400'
-                                    }`}
+                                      }`}
                                   >
                                     {stg}
                                   </span>
@@ -755,7 +748,7 @@ export const AccountPage: React.FC = () => {
                   </div>
                   <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200">
                     <span className="text-[11px] text-gray-400 font-bold uppercase">City / Location</span>
-                    <p className="text-sm font-bold text-gray-900 mt-1">{profile.city || 'Adoni, AP'}</p>
+                    <p className="text-sm font-bold text-gray-900 mt-1">{profile.city || 'Sumerpur, AP'}</p>
                   </div>
                   <div className="sm:col-span-2 p-3.5 bg-gray-50 rounded-xl border border-gray-200">
                     <span className="text-[11px] text-gray-400 font-bold uppercase">Primary Address</span>
@@ -810,43 +803,43 @@ export const AccountPage: React.FC = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {addresses.map((addr, idx) => (
-                  <div 
-                    key={idx} 
-                    className="border border-gray-200 hover:border-red-200 rounded-xl p-4.5 space-y-2 relative bg-white transition-all shadow-xs"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-gray-900 text-sm">{addr.fullName}</span>
-                      <span className="bg-gray-100 text-gray-700 text-[10px] font-bold px-2 py-0.5 rounded uppercase">
-                        {addr.addressType}
-                      </span>
-                    </div>
-                    <p className="text-gray-600 leading-relaxed">{addr.street}</p>
-                    {addr.landmark && (
-                      <p className="text-gray-500 text-[11px]">Landmark: {addr.landmark}</p>
-                    )}
-                    <p className="text-gray-700 font-semibold">{addr.city}, {addr.state} - {addr.pincode}</p>
-                    <p className="text-gray-500 font-mono text-[11px]">Phone: {addr.phone}</p>
-                    
-                    <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
-                      {idx === 0 ? (
-                        <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded">
-                          Default Address
+                  {addresses.map((addr, idx) => (
+                    <div
+                      key={idx}
+                      className="border border-gray-200 hover:border-red-200 rounded-xl p-4.5 space-y-2 relative bg-white transition-all shadow-xs"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-gray-900 text-sm">{addr.fullName}</span>
+                        <span className="bg-gray-100 text-gray-700 text-[10px] font-bold px-2 py-0.5 rounded uppercase">
+                          {addr.addressType}
                         </span>
-                      ) : <span />}
-                      {addresses.length > 1 && (
-                        <button
-                          onClick={() => handleDeleteAddress(idx)}
-                          className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50"
-                          title="Delete address"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                      </div>
+                      <p className="text-gray-600 leading-relaxed">{addr.street}</p>
+                      {addr.landmark && (
+                        <p className="text-gray-500 text-[11px]">Landmark: {addr.landmark}</p>
                       )}
+                      <p className="text-gray-700 font-semibold">{addr.city}, {addr.state} - {addr.pincode}</p>
+                      <p className="text-gray-500 font-mono text-[11px]">Phone: {addr.phone}</p>
+
+                      <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
+                        {idx === 0 ? (
+                          <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded">
+                            Default Address
+                          </span>
+                        ) : <span />}
+                        {addresses.length > 1 && (
+                          <button
+                            onClick={() => handleDeleteAddress(idx)}
+                            className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50"
+                            title="Delete address"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
               )}
 
               {/* Add Address Modal */}
@@ -959,7 +952,7 @@ export const AccountPage: React.FC = () => {
             <div className="space-y-6 animate-fade-in text-xs">
               <div className="pb-3 border-b border-gray-100">
                 <h2 className="font-black text-gray-900 uppercase text-base">
-                  Shivangi Mobile Adoni Showroom
+                  Shivangi Mobile Sumerpur Showroom
                 </h2>
                 <p className="text-xs text-gray-500 mt-0.5">
                   Visit our flagship store for instant device collection, exchanges, and warranty support.
@@ -976,7 +969,7 @@ export const AccountPage: React.FC = () => {
                     <div>
                       <h3 className="font-black text-gray-900 text-sm uppercase">Shivangi Mobile</h3>
                       <p className="text-gray-600 mt-1 leading-relaxed">
-                        Municipal Complex, Main Bus Stand Road, Adoni, Andhra Pradesh - 518301
+                        Opp. Nagraj Electronic, Main Bazar, Sumerpur, Rajasthan - 306902
                       </p>
                       <div className="mt-2 flex items-center gap-2 text-emerald-700 font-bold text-[11px]">
                         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -1097,13 +1090,12 @@ export const AccountPage: React.FC = () => {
                   return (
                     <div key={stg} className="flex flex-col items-center">
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold mb-1 shadow-xs ${
-                          isDone
-                            ? 'bg-emerald-600 text-white'
-                            : isCurrent
+                        className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold mb-1 shadow-xs ${isDone
+                          ? 'bg-emerald-600 text-white'
+                          : isCurrent
                             ? 'bg-[#E30613] text-white ring-2 ring-red-200'
                             : 'bg-white text-gray-400 border'
-                        }`}
+                          }`}
                       >
                         {isDone && !isCurrent ? <Check className="w-3 h-3 text-white" /> : idx + 1}
                       </div>
@@ -1138,7 +1130,7 @@ export const AccountPage: React.FC = () => {
                 {selectedOrder.address ? selectedOrder.address.fullName : 'Customer'}
               </p>
               <p className="text-gray-700">
-                {selectedOrder.address ? `${selectedOrder.address.street}${selectedOrder.address.landmark ? ', Landmark: ' + selectedOrder.address.landmark : ''}, ${selectedOrder.address.city}, ${selectedOrder.address.state} - ${selectedOrder.address.pincode}` : 'Adoni Showroom Counter'}
+                {selectedOrder.address ? `${selectedOrder.address.street}${selectedOrder.address.landmark ? ', Landmark: ' + selectedOrder.address.landmark : ''}, ${selectedOrder.address.city}, ${selectedOrder.address.state} - ${selectedOrder.address.pincode}` : 'Sumerpur Showroom Counter'}
               </p>
               <p className="text-[11px] text-gray-500">
                 Phone: <strong className="text-gray-800">{selectedOrder.address?.phone}</strong>

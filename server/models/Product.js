@@ -14,16 +14,7 @@ const ProductSchema = new mongoose.Schema({
   category: { 
     type: String, 
     required: true,
-    enum: [
-      'smartphones', 
-      'tablets', 
-      'laptops', 
-      'smartwatches', 
-      'earbuds', 
-      'accessories', 
-      'powerbanks', 
-      'speakers'
-    ]
+    trim: true
   },
   price: { type: Number, required: true },
   originalPrice: { type: Number, required: true },

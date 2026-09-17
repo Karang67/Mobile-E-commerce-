@@ -53,6 +53,8 @@ const OrderSchema = new mongoose.Schema({
     enum: ['Pending', 'Verified', 'Success', 'COD'],
     default: 'Pending'
   },
+  paymentScreenshot: { type: String },
+  transactionId: { type: String },
   address: { type: AddressSchema, required: true },
   paymentMethod: { type: String, required: true },
   fulfillmentType: { type: String, enum: ['delivery', 'pickup'], default: 'delivery' },

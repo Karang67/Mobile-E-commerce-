@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ClipboardList, 
-  Phone, 
-  Mail, 
-  MapPin, 
-  Search, 
-  CheckCircle2, 
-  Clock, 
+import {
+  ClipboardList,
+  Phone,
+  Mail,
+  MapPin,
+  Search,
+  CheckCircle2,
+  Clock,
   MessageCircle,
   Trash2,
   Store,
@@ -19,17 +19,24 @@ import {
   ArrowRight,
   ShieldCheck,
   CreditCard,
-  Send
+  Send,
+  QrCode,
+  Image as ImageIcon,
+  ExternalLink,
+  Copy,
+  Loader2
 } from 'lucide-react';
-import { 
-  getAdminNotifications, 
-  markNotificationAsRead, 
-  markAllNotificationsAsRead, 
+import {
+  getAdminNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
   clearAdminNotifications,
+  deleteAdminNotification,
   updateCustomerOrderStatus,
   getStatusMessage,
-  AdminInquiryNotification 
+  AdminInquiryNotification
 } from '../utils/notificationService';
+import { getOrders, deleteOrderFromMongo, clearAllOrdersFromMongo } from '../utils/apiService';
 import { OrderStatus } from '../types';
 
 export const AdminInquiries: React.FC = () => {
@@ -39,9 +46,56 @@ export const AdminInquiries: React.FC = () => {
   const [fulfillmentFilter, setFulfillmentFilter] = useState<string>('all');
   const [selectedInquiry, setSelectedInquiry] = useState<AdminInquiryNotification | null>(null);
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
+  const [viewingScreenshot, setViewingScreenshot] = useState<string | null>(null);
+  const [showClearModal, setShowClearModal] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
+  const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
+  // Guard: prevent refreshList from re-populating state while a clear operation is in progress
+  const isClearingRef = React.useRef(false);
 
-  const refreshList = () => {
-    setInquiries(getAdminNotifications());
+  const refreshList = async () => {
+    // Skip refresh if a clear-all operation is in progress to avoid race conditions
+    if (isClearingRef.current) return;
+
+    const localNotifs = getAdminNotifications();
+    try {
+      const mongoOrders = await getOrders();
+      if (Array.isArray(mongoOrders) && mongoOrders.length > 0) {
+        const localMap = new Map(localNotifs.map(n => [n.inquiryId, n]));
+        const merged = [...localNotifs];
+
+        mongoOrders.forEach(mo => {
+          if (!localMap.has(mo.id)) {
+            merged.push({
+              id: `mongo-${mo.id}`,
+              inquiryId: mo.id,
+              customerName: mo.address?.fullName || 'Customer',
+              customerPhone: mo.address?.phone || '',
+              customerEmail: (mo.address as any)?.email || '',
+              city: `${mo.address?.city || ''}${mo.address?.state ? ', ' + mo.address?.state : ''}`,
+              streetAddress: mo.address?.street || (mo.address as any)?.addressLine1 || '',
+              pincode: mo.address?.pincode || '',
+              fulfillmentType: (mo.fulfillmentType as any) || 'delivery',
+              itemsSummary: mo.items?.map(i => `${i.product?.name || 'Product'} (x${i.quantity || 1})`).join(', ') || 'Item',
+              itemsCount: mo.items?.reduce((sum, i) => sum + (i.quantity || 1), 0) || 1,
+              total: mo.total || 0,
+              paymentMethod: mo.paymentMethod || 'UPI QR Scanner',
+              paymentStatus: (mo.paymentStatus as any) || 'Pending',
+              paymentScreenshot: mo.paymentScreenshot,
+              transactionId: mo.transactionId,
+              status: (mo.status as any) || 'Order Placed',
+              createdAt: mo.date || new Date((mo as any).createdAt || Date.now()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }),
+              read: true,
+            });
+          }
+        });
+        setInquiries(merged);
+        return;
+      }
+    } catch {
+      // ignore
+    }
+    setInquiries(localNotifs);
   };
 
   useEffect(() => {
@@ -56,6 +110,47 @@ export const AdminInquiries: React.FC = () => {
       window.removeEventListener('storage', handleUpdate);
     };
   }, []);
+
+  const handleConfirmClearAll = async () => {
+    setIsClearing(true);
+    isClearingRef.current = true;
+    try {
+      // First delete from MongoDB, then clear localStorage
+      // Doing it in this order prevents any re-fetch from repopulating state
+      await clearAllOrdersFromMongo().catch(() => {/* ignore backend offline */});
+      clearAdminNotifications();
+      setInquiries([]);
+      setSelectedInquiry(null);
+      setShowClearModal(false);
+      setActionSuccessMsg('All orders and inquiries have been cleared from both your device and the database.');
+      setTimeout(() => setActionSuccessMsg(null), 4000);
+    } catch (err) {
+      console.error('Failed to clear orders', err);
+    } finally {
+      setIsClearing(false);
+      // Release the guard after a short delay to let any in-flight event handlers finish
+      setTimeout(() => { isClearingRef.current = false; }, 500);
+    }
+  };
+
+  const handleDeleteSingle = async (orderId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setDeletingOrderId(orderId);
+    try {
+      deleteAdminNotification(orderId);
+      await deleteOrderFromMongo(orderId).catch(() => {/* ignore */});
+      setInquiries(prev => prev.filter(i => i.inquiryId !== orderId && i.id !== orderId));
+      if (selectedInquiry && (selectedInquiry.inquiryId === orderId || selectedInquiry.id === orderId)) {
+        setSelectedInquiry(null);
+      }
+      setActionSuccessMsg(`Order #${orderId} deleted successfully.`);
+      setTimeout(() => setActionSuccessMsg(null), 3500);
+    } catch (err) {
+      console.error('Failed to delete order', err);
+    } finally {
+      setDeletingOrderId(null);
+    }
+  };
 
   const handleStatusChange = (orderId: string, newStatus: OrderStatus, currentPaymentStatus?: 'Pending' | 'Verified' | 'Success' | 'COD') => {
     updateCustomerOrderStatus(orderId, newStatus, currentPaymentStatus);
@@ -78,7 +173,7 @@ export const AdminInquiries: React.FC = () => {
   };
 
   const filtered = inquiries.filter(inq => {
-    const matchesSearch = 
+    const matchesSearch =
       inq.customerName.toLowerCase().includes(search.toLowerCase()) ||
       inq.customerPhone.includes(search) ||
       inq.customerEmail.toLowerCase().includes(search.toLowerCase()) ||
@@ -135,12 +230,8 @@ export const AdminInquiries: React.FC = () => {
           )}
           {inquiries.length > 0 && (
             <button
-              onClick={() => {
-                if (window.confirm('Clear all orders and inquiry records from the admin list?')) {
-                  clearAdminNotifications();
-                }
-              }}
-              className="text-red-400 hover:text-red-300 hover:bg-red-900/30 px-3.5 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5"
+              onClick={() => setShowClearModal(true)}
+              className="text-red-400 hover:text-red-300 hover:bg-red-900/30 px-3.5 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 border border-red-900/40 shadow-xs"
             >
               <Trash2 className="w-3.5 h-3.5" />
               <span>Clear List</span>
@@ -185,11 +276,10 @@ export const AdminInquiries: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={() => setStatusFilter(tab.id)}
-                className={`px-3 py-1.5 rounded-lg font-bold text-[11px] whitespace-nowrap transition-colors ${
-                  statusFilter === tab.id
+                className={`px-3 py-1.5 rounded-lg font-bold text-[11px] whitespace-nowrap transition-colors ${statusFilter === tab.id
                     ? 'bg-[#E30613] text-white shadow-xs'
                     : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                }`}
+                  }`}
               >
                 {tab.label}
               </button>
@@ -201,26 +291,23 @@ export const AdminInquiries: React.FC = () => {
             <span className="text-gray-400 font-bold text-[11px] mr-1">Type:</span>
             <button
               onClick={() => setFulfillmentFilter('all')}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold ${
-                fulfillmentFilter === 'all' ? 'bg-gray-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
-              }`}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold ${fulfillmentFilter === 'all' ? 'bg-gray-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
+                }`}
             >
               All
             </button>
             <button
               onClick={() => setFulfillmentFilter('delivery')}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 ${
-                fulfillmentFilter === 'delivery' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
-              }`}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 ${fulfillmentFilter === 'delivery' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
+                }`}
             >
               <Truck className="w-3 h-3" />
               <span>Doorstep Delivery</span>
             </button>
             <button
               onClick={() => setFulfillmentFilter('pickup')}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 ${
-                fulfillmentFilter === 'pickup' ? 'bg-amber-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
-              }`}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 ${fulfillmentFilter === 'pickup' ? 'bg-amber-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
+                }`}
             >
               <Store className="w-3 h-3" />
               <span>Store Pickup</span>
@@ -234,8 +321,8 @@ export const AdminInquiries: React.FC = () => {
         <div className="bg-[#1B2430] rounded-2xl border border-gray-700/40 p-12 text-center space-y-3">
           <ClipboardList className="w-12 h-12 text-gray-600 mx-auto" />
           <h3 className="text-sm font-bold text-gray-300">
-            {search || statusFilter !== 'all' || fulfillmentFilter !== 'all' 
-              ? 'No orders matching current filter criteria' 
+            {search || statusFilter !== 'all' || fulfillmentFilter !== 'all'
+              ? 'No orders matching current filter criteria'
               : 'No orders received yet'}
           </h3>
           <p className="text-xs text-gray-500 max-w-md mx-auto">
@@ -252,11 +339,10 @@ export const AdminInquiries: React.FC = () => {
             return (
               <div
                 key={inq.id}
-                className={`bg-[#1B2430] rounded-2xl border transition-all p-5 space-y-4 shadow-lg ${
-                  !inq.read
+                className={`bg-[#1B2430] rounded-2xl border transition-all p-5 space-y-4 shadow-lg ${!inq.read
                     ? 'border-red-500/60 bg-linear-to-r from-[#1B2430] via-red-950/20 to-[#1B2430]'
                     : 'border-gray-700/50'
-                }`}
+                  }`}
               >
                 {/* 1. Header Bar */}
                 <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-gray-700/50 text-xs">
@@ -285,7 +371,7 @@ export const AdminInquiries: React.FC = () => {
                     ) : (
                       <span className="text-amber-300 font-bold bg-amber-950/60 border border-amber-800/60 px-2.5 py-1 rounded-lg text-xs flex items-center gap-1.5">
                         <Store className="w-3.5 h-3.5 text-amber-400" />
-                        <span>Store Pickup: Adoni</span>
+                        <span>Store Pickup: Sumerpur</span>
                       </span>
                     )}
 
@@ -310,6 +396,21 @@ export const AdminInquiries: React.FC = () => {
                     <span className="font-mono font-black text-base text-[#E30613] bg-gray-900 px-3 py-1 rounded-lg border border-gray-800">
                       ₹{inq.total.toLocaleString('en-IN')}
                     </span>
+
+                    {/* Delete Single Order Button */}
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteSingle(inq.inquiryId || inq.id, e)}
+                      disabled={deletingOrderId === (inq.inquiryId || inq.id)}
+                      title="Delete this order"
+                      className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition-colors border border-transparent hover:border-red-800/40 disabled:opacity-50"
+                    >
+                      {deletingOrderId === (inq.inquiryId || inq.id) ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-red-400" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
+                    </button>
                   </div>
                 </div>
 
@@ -346,7 +447,7 @@ export const AdminInquiries: React.FC = () => {
                         <span className="text-amber-400 text-[9px] font-bold uppercase">Store Collection</span>
                       )}
                     </span>
-                    
+
                     {isDelivery ? (
                       <div className="space-y-1">
                         <div className="flex items-start gap-1.5 text-gray-200 font-medium">
@@ -369,7 +470,7 @@ export const AdminInquiries: React.FC = () => {
                     ) : (
                       <div className="space-y-1 text-gray-300">
                         <p className="font-bold text-white">Shivangi Mobile Showroom</p>
-                        <p className="text-gray-400 text-[11px]">Municipal Complex, Main Bus Stand Road, Adoni, AP - 518301</p>
+                        <p className="text-gray-400 text-[11px]">Opp. Nagraj Electronic, Main Bazar, Sumerpur, Rajasthan - 306902</p>
                         <p className="text-emerald-400 text-[11px] font-bold">Counter Pickup Counter #1</p>
                       </div>
                     )}
@@ -395,6 +496,73 @@ export const AdminInquiries: React.FC = () => {
                   </div>
                 </div>
 
+                {/* 2.5 Payment Proof & Verification Details */}
+                {(inq.paymentScreenshot || inq.transactionId) && (
+                  <div className="bg-emerald-950/30 border border-emerald-700/50 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-3">
+                      {inq.paymentScreenshot ? (
+                        <div
+                          onClick={() => setViewingScreenshot(inq.paymentScreenshot!)}
+                          className="relative group cursor-pointer w-14 h-14 rounded-lg overflow-hidden border-2 border-emerald-500/60 shadow-sm shrink-0 bg-black/40"
+                        >
+                          <img
+                            src={inq.paymentScreenshot}
+                            alt="Payment Proof"
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                            <Eye className="w-4 h-4" />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-emerald-900/40 border border-emerald-700/50 flex items-center justify-center text-emerald-400">
+                          <QrCode className="w-5 h-5" />
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-bold text-emerald-400 flex items-center gap-1.5">
+                          <ImageIcon className="w-3.5 h-3.5" />
+                          <span>Customer Payment Proof Uploaded</span>
+                        </div>
+                        {inq.transactionId ? (
+                          <div className="text-gray-300 text-[11px] font-mono mt-0.5">
+                            UTR / Txn ID: <strong className="text-white bg-gray-800 px-1.5 py-0.5 rounded">{inq.transactionId}</strong>
+                          </div>
+                        ) : (
+                          <div className="text-[11px] text-gray-400 mt-0.5">Screenshot attached for visual verification</div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {inq.paymentScreenshot && (
+                        <button
+                          type="button"
+                          onClick={() => setViewingScreenshot(inq.paymentScreenshot!)}
+                          className="bg-emerald-900/60 hover:bg-emerald-800/80 text-emerald-200 border border-emerald-700/60 px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Inspect Screenshot</span>
+                        </button>
+                      )}
+
+                      {inq.paymentStatus === 'Pending' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleStatusChange(inq.inquiryId, 'Packed', 'Verified');
+                            setActionSuccessMsg(`Order #${inq.inquiryId} payment verified and marked as Packed!`);
+                          }}
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow-md shadow-emerald-900/40 transition-all"
+                        >
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          <span>Verify & Pack Order ✓</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* 3. LIFECYCLE PROGRESS & ADMIN ACTION CONTROLS */}
                 <div className="bg-gray-900/90 rounded-xl p-4 border border-gray-700/60 space-y-3.5">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -415,13 +583,12 @@ export const AdminInquiries: React.FC = () => {
                       return (
                         <div key={stage} className="flex flex-col items-center">
                           <div
-                            className={`w-full py-1.5 px-1 rounded-lg font-bold transition-all truncate flex items-center justify-center gap-1 ${
-                              isPast
+                            className={`w-full py-1.5 px-1 rounded-lg font-bold transition-all truncate flex items-center justify-center gap-1 ${isPast
                                 ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-700/60'
                                 : isCurrent
-                                ? 'bg-[#E30613] text-white font-black shadow-md ring-2 ring-red-500/50'
-                                : 'bg-gray-800 text-gray-500 border border-gray-700/40'
-                            }`}
+                                  ? 'bg-[#E30613] text-white font-black shadow-md ring-2 ring-red-500/50'
+                                  : 'bg-gray-800 text-gray-500 border border-gray-700/40'
+                              }`}
                           >
                             {isPast && <Check className="w-3 h-3 text-emerald-400 shrink-0" />}
                             <span className="truncate">{stage}</span>
@@ -598,7 +765,7 @@ export const AdminInquiries: React.FC = () => {
                   {selectedInquiry.fulfillmentType === 'delivery' ? 'Doorstep Delivery Address' : 'Store Pickup Location'}
                 </span>
                 <p className="text-white font-medium leading-relaxed">
-                  {selectedInquiry.streetAddress || selectedInquiry.city || 'Adoni Showroom Counter'}
+                  {selectedInquiry.streetAddress || selectedInquiry.city || 'Sumerpur Showroom Counter'}
                 </p>
                 {selectedInquiry.pincode && (
                   <p className="text-gray-400 font-mono">Pincode: {selectedInquiry.pincode}</p>
@@ -627,9 +794,8 @@ export const AdminInquiries: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="text-[10px] font-bold text-gray-400 uppercase block">Payment Verification</span>
-                    <span className={`font-bold text-xs ${
-                      selectedInquiry.paymentStatus === 'Verified' ? 'text-emerald-400' : 'text-yellow-400'
-                    }`}>
+                    <span className={`font-bold text-xs ${selectedInquiry.paymentStatus === 'Verified' ? 'text-emerald-400' : 'text-yellow-400'
+                      }`}>
                       {selectedInquiry.paymentMethod} • Status: {selectedInquiry.paymentStatus}
                     </span>
                   </div>
@@ -672,6 +838,99 @@ export const AdminInquiries: React.FC = () => {
                 className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-xl font-bold"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full-Screen Payment Screenshot Viewer Modal */}
+      {viewingScreenshot && (
+        <div
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setViewingScreenshot(null)}
+        >
+          <div
+            className="bg-[#1B2430] border border-gray-700 rounded-2xl max-w-2xl w-full p-4 space-y-3 shadow-2xl relative"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-gray-700 pb-3">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                <span className="font-bold text-white text-sm">Customer Payment Screenshot Proof</span>
+              </div>
+              <button
+                onClick={() => setViewingScreenshot(null)}
+                className="text-gray-400 hover:text-white p-1 rounded-lg bg-gray-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] overflow-auto rounded-xl border border-gray-700/60 bg-black/50 p-2 flex items-center justify-center">
+              <img
+                src={viewingScreenshot}
+                alt="Payment Proof Full"
+                className="max-h-[65vh] w-auto object-contain rounded-lg shadow-lg"
+              />
+            </div>
+
+            <div className="flex items-center justify-between pt-1 text-xs">
+              <a
+                href={viewingScreenshot}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 hover:underline flex items-center gap-1 font-semibold"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Open Original High-Res Image</span>
+              </a>
+              <button
+                onClick={() => setViewingScreenshot(null)}
+                className="bg-gray-700 hover:bg-gray-600 text-white px-5 py-2 rounded-xl font-bold"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* In-App Modal: Confirm Clear All Orders */}
+      {showClearModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-[#1B2430] border border-red-500/50 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center gap-3 text-red-400">
+              <div className="p-3 bg-red-950/60 rounded-xl border border-red-800/60 shrink-0">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-white font-bold text-base">Clear All Orders & Inquiries?</h3>
+                <p className="text-xs text-gray-400">Permanently removes all order records</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-300 leading-relaxed bg-gray-800/60 p-3.5 rounded-xl border border-gray-700/60">
+              Are you sure you want to delete all <strong className="text-white font-bold">{inquiries.length} order(s)</strong>? This will remove records from both your admin dashboard and the database.
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowClearModal(false)}
+                disabled={isClearing}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold text-gray-300 hover:bg-gray-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmClearAll}
+                disabled={isClearing}
+                className="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 shadow-lg disabled:opacity-50"
+              >
+                {isClearing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                <span>{isClearing ? 'Clearing All...' : 'Yes, Clear All Orders'}</span>
               </button>
             </div>
           </div>

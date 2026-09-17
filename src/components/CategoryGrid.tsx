@@ -45,7 +45,7 @@ export const CategoryGrid: React.FC = () => {
 
       <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-8 gap-2.5 md:gap-3">
         {categories.map(cat => {
-          const Icon = iconMap[cat.icon] || Smartphone;
+          const Icon = (cat.icon ? iconMap[cat.icon] : null) || Smartphone;
           return (
             <Link
               key={cat.id}

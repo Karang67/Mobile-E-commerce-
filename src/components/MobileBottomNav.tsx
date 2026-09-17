@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { 
-  Home, 
-  Search, 
-  ShoppingCart, 
-  User, 
-  MoreHorizontal, 
-  MapPin, 
-  Tag, 
-  Scale, 
-  Heart, 
-  Phone, 
-  X, 
+import {
+  Home,
+  Search,
+  ShoppingCart,
+  User,
+  MoreHorizontal,
+  MapPin,
+  Tag,
+  Scale,
+  Heart,
+  Phone,
+  X,
   ShieldCheck,
   Truck
 } from 'lucide-react';
@@ -24,7 +24,7 @@ export const MobileBottomNav: React.FC = () => {
   return (
     <>
       {/* Fixed Bottom Navigation Bar - Mobile Only */}
-      <nav 
+      <nav
         className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 shadow-[0_-3px_10px_rgba(0,0,0,0.08)] safe-area-pb"
         aria-label="Mobile Navigation"
       >
@@ -34,8 +34,7 @@ export const MobileBottomNav: React.FC = () => {
             to="/"
             end
             className={({ isActive }) =>
-              `flex flex-col items-center justify-center h-full transition-colors ${
-                isActive ? 'text-[#E30613]' : 'text-gray-500 hover:text-gray-900'
+              `flex flex-col items-center justify-center h-full transition-colors ${isActive ? 'text-[#E30613]' : 'text-gray-500 hover:text-gray-900'
               }`
             }
           >
@@ -47,8 +46,7 @@ export const MobileBottomNav: React.FC = () => {
           <NavLink
             to="/search"
             className={({ isActive }) =>
-              `flex flex-col items-center justify-center h-full transition-colors ${
-                isActive ? 'text-[#E30613]' : 'text-gray-500 hover:text-gray-900'
+              `flex flex-col items-center justify-center h-full transition-colors ${isActive ? 'text-[#E30613]' : 'text-gray-500 hover:text-gray-900'
               }`
             }
           >
@@ -60,8 +58,7 @@ export const MobileBottomNav: React.FC = () => {
           <NavLink
             to="/cart"
             className={({ isActive }) =>
-              `relative flex flex-col items-center justify-center h-full transition-colors ${
-                isActive ? 'text-[#E30613]' : 'text-gray-500 hover:text-gray-900'
+              `relative flex flex-col items-center justify-center h-full transition-colors ${isActive ? 'text-[#E30613]' : 'text-gray-500 hover:text-gray-900'
               }`
             }
           >
@@ -80,8 +77,7 @@ export const MobileBottomNav: React.FC = () => {
           <NavLink
             to="/account"
             className={({ isActive }) =>
-              `flex flex-col items-center justify-center h-full transition-colors ${
-                isActive ? 'text-[#E30613]' : 'text-gray-500 hover:text-gray-900'
+              `flex flex-col items-center justify-center h-full transition-colors ${isActive ? 'text-[#E30613]' : 'text-gray-500 hover:text-gray-900'
               }`
             }
           >
@@ -92,9 +88,8 @@ export const MobileBottomNav: React.FC = () => {
           {/* 5. More (Three Dots) */}
           <button
             onClick={() => setMoreSheetOpen(true)}
-            className={`flex flex-col items-center justify-center h-full transition-colors ${
-              moreSheetOpen ? 'text-[#E30613]' : 'text-gray-500 hover:text-gray-900'
-            }`}
+            className={`flex flex-col items-center justify-center h-full transition-colors ${moreSheetOpen ? 'text-[#E30613]' : 'text-gray-500 hover:text-gray-900'
+              }`}
             aria-label="More options"
           >
             <MoreHorizontal className="w-5 h-5" />
@@ -139,7 +134,7 @@ export const MobileBottomNav: React.FC = () => {
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-gray-900 leading-tight">Find Stores</h4>
-                  <p className="text-[10px] text-gray-500">Adoni Outlet</p>
+                  <p className="text-[10px] text-gray-500">Sumerpur Outlet</p>
                 </div>
               </NavLink>
 

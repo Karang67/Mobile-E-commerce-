@@ -6,7 +6,18 @@ export type ProductCategory =
   | 'earbuds' 
   | 'accessories' 
   | 'powerbanks' 
-  | 'speakers';
+  | 'speakers'
+  | (string & {});
+
+export interface CategoryItem {
+  id: string;
+  name: string;
+  count?: number;
+  itemCount?: number;
+  icon?: string;
+  desc?: string;
+  isCustom?: boolean;
+}
 
 export interface ProductVariant {
   name: string;
@@ -104,6 +115,8 @@ export interface Order {
   total: number;
   status: OrderStatus;
   paymentStatus?: 'Pending' | 'Verified' | 'Success' | 'COD';
+  paymentScreenshot?: string;
+  transactionId?: string;
   address: Address;
   paymentMethod: string;
   fulfillmentType?: 'delivery' | 'pickup';
@@ -111,6 +124,15 @@ export interface Order {
   trackingNumber?: string;
   estimatedDelivery?: string;
   statusMessage?: string;
+}
+
+export interface PaymentSettings {
+  enableQrScanner: boolean;
+  enableCod: boolean;
+  upiId: string;
+  payeeName: string;
+  qrCodeImage: string;
+  instructions: string;
 }
 
 export interface EmiPlan {

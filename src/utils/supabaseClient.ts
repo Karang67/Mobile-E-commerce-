@@ -35,7 +35,7 @@ export interface AuthResponse {
     email: string;
   } | null;
   session?: any | null;
-  demoOtp?: string; // provided only in demo mode for instant testing
+  // demoOtp removed — SEC-006: OTP must never be included in API responses
 }
 
 /**
@@ -67,7 +67,9 @@ export const sendEmailOtp = async (email: string): Promise<AuthResponse> => {
     }
   }
 
-  // 2. Seamless development fallback (generates genuine 6-digit OTP and logs/shows for preview)
+  // 2. Development-only fallback — blocked in production
+  // SEC-006: demoOtp is never returned in the response to prevent OTP exposure.
+  // OTP is only logged to the browser console for local development.
   const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
   const demoData = {
     email: normalizedEmail,
@@ -81,12 +83,13 @@ export const sendEmailOtp = async (email: string): Promise<AuthResponse> => {
     // ignore
   }
 
-  console.log(`[Supabase Auth] Email OTP for ${normalizedEmail}: ${generatedOtp}`);
+  // SEC-006: OTP is logged to console only — never included in the API response
+  console.log(`[DEV ONLY] Email OTP for ${normalizedEmail}: ${generatedOtp}`);
 
   return {
     success: true,
-    message: `Verification code sent to ${normalizedEmail}! (Demo Mode: Code is ${generatedOtp})`,
-    demoOtp: generatedOtp,
+    message: `Verification code sent to ${normalizedEmail}! Check your browser console for the code (Development Mode).`,
+    // demoOtp intentionally omitted from response — check browser console
   };
 };
 
@@ -141,7 +144,9 @@ export const verifyEmailOtp = async (email: string, token: string): Promise<Auth
       return { success: false, message: 'OTP has expired. Please request a new OTP.' };
     }
 
-    if (demoData.otp !== trimmedToken && trimmedToken !== '123456') {
+    // SEC-006 FIX: Removed hardcoded '123456' universal bypass.
+    // Only the actual generated OTP is accepted.
+    if (demoData.otp !== trimmedToken) {
       return { success: false, message: 'Invalid OTP code. Please check and try again.' };
     }
 

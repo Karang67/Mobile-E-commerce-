@@ -1,13 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  ShieldCheck, 
-  Clock, 
-  MapPin, 
-  Phone, 
-  Mail, 
-  CreditCard, 
-  FileText, 
+import {
+  ShieldCheck,
+  Clock,
+  MapPin,
+  Phone,
+  Mail,
+  CreditCard,
+  FileText,
   Truck,
   HelpCircle,
   Building2,
@@ -34,7 +34,7 @@ export const AboutPage: React.FC = () => {
           About {brandName}
         </h1>
         <p className="text-xs sm:text-sm text-gray-300 max-w-2xl mt-2 leading-relaxed">
-          {brandName} is a premier electronics retail destination in Adoni, Andhra Pradesh, offering genuine smartphones, tablets, smartwatches, certified pre-owned devices, and consumer electronics with 100% genuine brand warranty.
+          {brandName} is a premier electronics retail destination in Sumerpur, Rajasthan, offering genuine smartphones, tablets, smartwatches, certified pre-owned devices, and consumer electronics with 100% genuine brand warranty.
         </p>
       </div>
 
@@ -44,7 +44,7 @@ export const AboutPage: React.FC = () => {
             <Building2 className="w-5 h-5" />
           </div>
           <h3 className="font-bold text-sm text-gray-900 mb-1">{storeTagline}</h3>
-          <p className="text-xs text-gray-600">Serving happy mobile customers in Adoni with trusted advice and transparent pricing.</p>
+          <p className="text-xs text-gray-600">Serving happy mobile customers in Sumerpur with trusted advice and transparent pricing.</p>
         </div>
 
         <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
@@ -52,7 +52,7 @@ export const AboutPage: React.FC = () => {
             <Clock className="w-5 h-5" />
           </div>
           <h3 className="font-bold text-sm text-gray-900 mb-1">Instant Store Pickup</h3>
-          <p className="text-xs text-gray-600">Walk into our Adoni showroom for instant counter checkout and live demo testing.</p>
+          <p className="text-xs text-gray-600">Walk into our Sumerpur showroom for instant counter checkout and live demo testing.</p>
         </div>
 
         <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
@@ -134,7 +134,7 @@ export const ShippingPage: React.FC = () => {
 
       <div className="bg-white p-6 rounded-2xl border border-gray-200 space-y-4 shadow-xs leading-relaxed">
         <h3 className="font-bold text-sm text-gray-900">1. Instant In-Store Pickup</h3>
-        <p>All items listed on Shivangi Mobile are available directly at our retail store in Adoni, Andhra Pradesh (Municipal Complex, Bus Stand Road). You can reserve your phone or accessory online and walk in for instant collection.</p>
+        <p>All items listed on Shivangi Mobile are available directly at our retail store in Sumerpur, Rajasthan (Opp. Nagraj Electronic, Main Bazar, Sumerpur, Rajasthan - 306902). You can reserve your phone or accessory online and walk in for instant collection.</p>
 
         <h3 className="font-bold text-sm text-gray-900">2. Free Order Reservation</h3>
         <p>There are zero charges for reserving orders or picking up items in-store. All store pickups are 100% free.</p>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Save, AlertCircle, CheckCircle2, RotateCcw, ShieldCheck } from 'lucide-react';
-import { getAdminPassword, setAdminPassword, resetAllData } from '../data/adminData';
+import { Eye, EyeOff, Save, AlertCircle, CheckCircle2, RotateCcw, ShieldCheck, Loader2 } from 'lucide-react';
+import { changeAdminPasswordOnBackend, resetAllData } from '../data/adminData';
 import { useBrand } from '../context/BrandContext';
 
 const inputCls = "w-full bg-gray-800 text-gray-200 text-sm rounded-xl px-3.5 py-2.5 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-[#E30613] placeholder-gray-500";
@@ -29,15 +29,29 @@ export const AdminSettings: React.FC = () => {
     setTimeout(() => setBrandSaved(false), 2000);
   };
 
-  const changePassword = () => {
+  const [pwdLoading, setPwdLoading] = useState(false);
+
+  const changePassword = async () => {
     setPwdError('');
-    if (oldPwd !== getAdminPassword()) { setPwdError('Current password is incorrect.'); return; }
-    if (newPwd.length < 4) { setPwdError('New password must be at least 4 characters.'); return; }
+    if (!oldPwd) { setPwdError('Please enter your current password.'); return; }
+    if (newPwd.length < 6) { setPwdError('New password must be at least 6 characters.'); return; }
     if (newPwd !== confirmPwd) { setPwdError('Passwords do not match.'); return; }
-    setAdminPassword(newPwd);
-    setOldPwd(''); setNewPwd(''); setConfirmPwd('');
-    setPwdSaved(true);
-    setTimeout(() => setPwdSaved(false), 2000);
+
+    setPwdLoading(true);
+    try {
+      const res = await changeAdminPasswordOnBackend(oldPwd, newPwd);
+      if (!res.success) {
+        setPwdError(res.error || 'Failed to update password.');
+      } else {
+        setOldPwd(''); setNewPwd(''); setConfirmPwd('');
+        setPwdSaved(true);
+        setTimeout(() => setPwdSaved(false), 3000);
+      }
+    } catch {
+      setPwdError('Server connection error. Please try again.');
+    } finally {
+      setPwdLoading(false);
+    }
   };
 
   const doReset = () => {
@@ -110,8 +124,13 @@ export const AdminSettings: React.FC = () => {
           </div>
         )}
 
-        <button onClick={changePassword} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm bg-[#E30613] hover:bg-[#c40510] text-white">
-          <ShieldCheck className="w-4 h-4" /> Update Password
+        <button
+          onClick={changePassword}
+          disabled={pwdLoading}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm bg-[#E30613] hover:bg-[#c40510] disabled:opacity-50 text-white transition-colors"
+        >
+          {pwdLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+          {pwdLoading ? 'Updating Password...' : 'Update Password'}
         </button>
       </div>
 

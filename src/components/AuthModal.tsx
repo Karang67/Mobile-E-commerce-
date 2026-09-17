@@ -81,9 +81,8 @@ export const AuthModal: React.FC = () => {
 
     if (res.success) {
       setStep('otp');
-      if (res.demoOtp) {
-        setDemoCode(res.demoOtp);
-      }
+      // SEC-006: demoOtp is no longer returned in response body.
+      // In dev mode, check browser console for the OTP code.
       setCountdown(30);
       // Auto focus first OTP input box
       setTimeout(() => inputRefs.current[0]?.focus(), 150);

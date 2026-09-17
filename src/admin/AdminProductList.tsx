@@ -10,30 +10,34 @@ import {
   Star,
   CheckCircle2,
   XCircle,
-  Filter
+  Filter,
+  Tags,
+  Layers,
+  X
 } from 'lucide-react';
 import { useStoreData } from '../context/StoreDataContext';
 import { deleteProductFromMongo } from '../utils/apiService';
+import { addCustomCategory, deleteCustomCategory } from '../data/adminData';
 import { Product, ProductCategory } from '../types';
-
-const CATEGORIES: Array<'all' | ProductCategory> = [
-  'all', 'smartphones', 'tablets', 'laptops', 'smartwatches',
-  'earbuds', 'accessories', 'powerbanks', 'speakers'
-];
 
 type SortKey = 'name' | 'price' | 'discount' | 'rating';
 
 export const AdminProductList: React.FC = () => {
   const navigate = useNavigate();
-  const { products, refresh } = useStoreData();
+  const { products, categories, refresh } = useStoreData();
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState<'all' | ProductCategory>('all');
+  const [category, setCategory] = useState<string>('all');
   const [stockFilter, setStockFilter] = useState<'all' | 'inStock' | 'outOfStock'>('all');
   const [conditionFilter, setConditionFilter] = useState<'all' | 'new' | 'preowned'>('all');
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortAsc, setSortAsc] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
+  // Category modal states
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatDesc, setNewCatDesc] = useState('');
 
   const filtered = useMemo(() => {
     let list = [...products];
@@ -45,7 +49,14 @@ export const AdminProductList: React.FC = () => {
         p.sku.toLowerCase().includes(q)
       );
     }
-    if (category !== 'all') list = list.filter(p => p.category === category);
+    if (category !== 'all') {
+      const cId = category.toLowerCase().trim();
+      list = list.filter(p => {
+        const pCat = (p.category || '').toLowerCase().trim();
+        const pSlug = pCat.replace(/[^a-z0-9]+/g, '-');
+        return pCat === cId || pSlug === cId;
+      });
+    }
     if (stockFilter === 'inStock') list = list.filter(p => p.inStock);
     if (stockFilter === 'outOfStock') list = list.filter(p => !p.inStock);
     if (conditionFilter === 'new') list = list.filter(p => !p.isSecondHand);
@@ -59,7 +70,7 @@ export const AdminProductList: React.FC = () => {
     });
 
     return list;
-  }, [products, search, category, stockFilter, sortKey, sortAsc]);
+  }, [products, search, category, stockFilter, conditionFilter, sortKey, sortAsc]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortAsc(v => !v);
@@ -108,13 +119,22 @@ export const AdminProductList: React.FC = () => {
           <h1 className="text-xl font-black text-white">Products</h1>
           <p className="text-sm text-gray-400 mt-0.5">{products.length} total products</p>
         </div>
-        <Link
-          to="/admin/products/new"
-          className="flex items-center gap-2 bg-[#E30613] hover:bg-[#c40510] text-white px-4 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-md"
-        >
-          <Plus className="w-4 h-4" />
-          Add Product
-        </Link>
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => setShowCategoryModal(true)}
+            className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-200 px-4 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm"
+          >
+            <Tags className="w-4 h-4 text-[#E30613]" />
+            <span>Manage Categories</span>
+          </button>
+          <Link
+            to="/admin/products/new"
+            className="flex items-center gap-2 bg-[#E30613] hover:bg-[#c40510] text-white px-4 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-md"
+          >
+            <Plus className="w-4 h-4" />
+            Add Product
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}
@@ -163,21 +183,36 @@ export const AdminProductList: React.FC = () => {
           ))}
         </div>
 
-        {/* Category pills */}
-        <div className="flex gap-1.5 flex-wrap">
-          {CATEGORIES.map(c => (
-            <button
-              key={c}
-              onClick={() => setCategory(c)}
-              className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-colors capitalize ${
-                category === c
-                  ? 'bg-[#E30613] text-white'
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
-            >
-              {c}
-            </button>
-          ))}
+        {/* Dynamic Category pills */}
+        <div className="flex gap-1.5 flex-wrap items-center">
+          <button
+            onClick={() => setCategory('all')}
+            className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-colors capitalize ${
+              category === 'all'
+                ? 'bg-[#E30613] text-white shadow-xs'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            All Categories ({products.length})
+          </button>
+          {categories.map(c => {
+            const isSel = category.toLowerCase() === c.id.toLowerCase() || category.toLowerCase() === c.name.toLowerCase();
+            return (
+              <button
+                key={c.id}
+                onClick={() => setCategory(c.id)}
+                className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-colors capitalize flex items-center gap-1 ${
+                  isSel
+                    ? 'bg-[#E30613] text-white shadow-xs'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                <span>{c.name}</span>
+                <span className="opacity-75 font-mono text-[10px]">({c.itemCount ?? 0})</span>
+                {c.isCustom && <span className="text-[9px] text-amber-400 font-bold ml-0.5">★</span>}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -333,6 +368,135 @@ export const AdminProductList: React.FC = () => {
                 className="flex-1 bg-red-700 hover:bg-red-600 text-white py-2.5 rounded-xl font-bold text-sm transition-colors"
               >
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Category Management Modal */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-[#1B2430] border border-gray-700 rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between p-5 border-b border-gray-700/60 bg-gray-900/40">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[#E30613]/10 text-[#E30613] flex items-center justify-center font-bold">
+                  <Tags className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-white font-black text-base">Category Management</h3>
+                  <p className="text-gray-400 text-xs">Add your own custom categories for products</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowCategoryModal(false)}
+                className="p-1 text-gray-400 hover:text-white rounded-lg hover:bg-gray-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+              {/* Add New Category Form */}
+              <div className="bg-gray-800/80 p-4 rounded-xl border border-gray-700 space-y-3">
+                <h4 className="text-xs font-bold text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <Plus className="w-3.5 h-3.5 text-[#E30613]" />
+                  <span>Add New Custom Category</span>
+                </h4>
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    placeholder="Category Name (e.g. Smart TV, Drones, Gaming, Cameras)..."
+                    value={newCatName}
+                    onChange={e => setNewCatName(e.target.value)}
+                    className="w-full bg-gray-900 text-gray-100 placeholder-gray-500 text-xs rounded-lg px-3 py-2.5 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-[#E30613]"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Short Description (e.g. 4K Ultra HD TVs & Displays)..."
+                    value={newCatDesc}
+                    onChange={e => setNewCatDesc(e.target.value)}
+                    className="w-full bg-gray-900 text-gray-100 placeholder-gray-500 text-xs rounded-lg px-3 py-2 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-[#E30613]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!newCatName.trim()) return;
+                      addCustomCategory(newCatName.trim(), newCatDesc.trim());
+                      setNewCatName('');
+                      setNewCatDesc('');
+                      refresh();
+                    }}
+                    className="w-full bg-[#E30613] hover:bg-[#c40510] text-white text-xs font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Save & Activate Category</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Existing Categories List */}
+              <div>
+                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                  All Active Categories ({categories.length})
+                </h4>
+                <div className="space-y-2">
+                  {categories.map(c => (
+                    <div
+                      key={c.id}
+                      className="flex items-center justify-between p-3 rounded-xl bg-gray-800/40 border border-gray-700/50 hover:border-gray-600 transition-colors"
+                    >
+                      <div className="min-w-0 pr-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm text-gray-200">{c.name}</span>
+                          {c.isCustom ? (
+                            <span className="bg-amber-500/20 text-amber-400 text-[10px] font-bold px-1.5 py-0.5 rounded border border-amber-500/30">
+                              Custom
+                            </span>
+                          ) : (
+                            <span className="bg-blue-500/10 text-blue-400 text-[10px] font-medium px-1.5 py-0.5 rounded">
+                              Default
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-gray-400 truncate mt-0.5">
+                          ID: <span className="font-mono text-gray-300">{c.id}</span> {c.desc ? `· ${c.desc}` : ''}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="bg-gray-700 text-gray-300 text-xs px-2.5 py-1 rounded-lg font-mono font-bold">
+                          {c.itemCount ?? 0} {c.itemCount === 1 ? 'item' : 'items'}
+                        </span>
+                        {c.isCustom && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm(`Are you sure you want to delete custom category "${c.name}"?`)) {
+                                deleteCustomCategory(c.id);
+                                refresh();
+                              }
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition-colors"
+                            title="Delete custom category"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-gray-900/60 border-t border-gray-700/60 text-right">
+              <button
+                type="button"
+                onClick={() => setShowCategoryModal(false)}
+                className="bg-gray-700 hover:bg-gray-600 text-gray-200 px-5 py-2 rounded-xl text-xs font-bold transition-colors"
+              >
+                Done
               </button>
             </div>
           </div>
