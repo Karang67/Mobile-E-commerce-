@@ -86,28 +86,28 @@ app.use(mongoSanitize());
 // ─── SEC-008: Rate Limiting ───────────────────────────────────────────────────
 const isDev = process.env.NODE_ENV !== 'production';
 
-// Global limit: 150 req/15min in production, 2000 in dev
+// Global limit: 1000 req/15min (generous for small admin site)
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: isDev ? 2000 : 150,
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests. Please try again in 15 minutes.' },
 });
 
-// Strict limit for file uploads: 10 uploads per hour per IP (100 in dev)
+// Upload limit: 50 uploads per hour
 const uploadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: isDev ? 100 : 10,
+  max: 50,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Upload limit reached. Please try again in 1 hour.' },
 });
 
-// Order submission limit: 10 orders per hour per IP (100 in dev)
+// Order limit: 50 orders per hour
 const orderLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: isDev ? 100 : 10,
+  max: 50,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Order submission limit reached. Please contact the store for assistance.' },
@@ -127,7 +127,6 @@ if (!isDev) {
   app.use('/api/', globalLimiter);
   app.use('/api/upload', uploadLimiter);
   app.use('/api/orders', orderLimiter);
-  app.use('/api/auth', authLimiter);
 }
 
 // ─── Health Check (public, no auth) ──────────────────────────────────────────
