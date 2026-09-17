@@ -113,10 +113,10 @@ const orderLimiter = rateLimit({
   message: { error: 'Order submission limit reached. Please contact the store for assistance.' },
 });
 
-// Auth brute-force protection: 10 login attempts per 15 minutes per IP (100 in dev)
+// Auth login limit: 100 attempts per 15 minutes (admin-friendly)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: isDev ? 100 : 10,
+  max: 100,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
