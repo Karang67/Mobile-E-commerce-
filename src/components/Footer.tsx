@@ -270,8 +270,12 @@ export const Footer: React.FC = () => {
         </div>
 
         {/* Bottom Copyright & Disclaimer */}
-        <div className="pt-6 text-center text-xs text-gray-400 space-y-2">
+        <div className="pt-6 border-t border-gray-700/40 text-center text-xs text-gray-400 flex flex-col md:flex-row items-center justify-between gap-2">
           <p>© 2026 {brandName} Demo Store. All Rights Reserved.</p>
+          <Link to="/admin" className="text-gray-400 hover:text-white font-semibold hover:underline flex items-center gap-1.5 transition-colors">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#E30613]" />
+            <span>Admin Login</span>
+          </Link>
         </div>
       </div>
     </footer>

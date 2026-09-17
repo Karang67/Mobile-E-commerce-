@@ -60,22 +60,26 @@ const ScrollToTop: React.FC = () => {
 // Admin app — completely separate from storefront (no header/footer/nav)
 const AdminApp: React.FC = () => (
   <BrandProvider>
-    <AdminGuard>
-      <AdminLayout>
-        <Routes>
-          <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
-          <Route path="/dashboard" element={<AdminDashboard />} />
-          <Route path="/inquiries" element={<AdminInquiries />} />
-          <Route path="/products" element={<AdminProductList />} />
-          <Route path="/products/new" element={<AdminProductEditor />} />
-          <Route path="/products/:id/edit" element={<AdminProductEditor />} />
-          <Route path="/offers" element={<AdminOffers />} />
-          <Route path="/store" element={<AdminStore />} />
-          <Route path="/settings" element={<AdminSettings />} />
-          <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
-        </Routes>
-      </AdminLayout>
-    </AdminGuard>
+    <StoreDataProvider>
+      <ToastProvider>
+        <AdminGuard>
+          <AdminLayout>
+            <Routes>
+              <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="/dashboard" element={<AdminDashboard />} />
+              <Route path="/inquiries" element={<AdminInquiries />} />
+              <Route path="/products" element={<AdminProductList />} />
+              <Route path="/products/new" element={<AdminProductEditor />} />
+              <Route path="/products/:id/edit" element={<AdminProductEditor />} />
+              <Route path="/offers" element={<AdminOffers />} />
+              <Route path="/store" element={<AdminStore />} />
+              <Route path="/settings" element={<AdminSettings />} />
+              <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
+            </Routes>
+          </AdminLayout>
+        </AdminGuard>
+      </ToastProvider>
+    </StoreDataProvider>
   </BrandProvider>
 );
 // Storefront wrapper

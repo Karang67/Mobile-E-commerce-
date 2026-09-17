@@ -203,11 +203,11 @@ export const AdminProductEditor: React.FC = () => {
 
   const validate = (): boolean => {
     const errs: string[] = [];
-    if (!form.name.trim()) errs.push('Product name is required');
-    if (!form.brand.trim()) errs.push('Brand is required');
-    if (!form.sku.trim()) errs.push('SKU is required');
-    if (form.price <= 0) errs.push('Price must be greater than 0 (go to Pricing tab)');
-    if (form.images.filter(i => i.trim()).length === 0) errs.push('At least one image URL is required (go to Images tab)');
+    if (!form.name.trim()) errs.push('Product name is required (Basic tab)');
+    if (!form.brand.trim()) errs.push('Brand is required (Basic tab)');
+    if (!form.sku.trim()) errs.push('SKU is required (Basic tab)');
+    if (form.price <= 0) errs.push('Price must be greater than 0 (Pricing tab)');
+    if (form.images.filter(i => i.trim()).length === 0) errs.push('At least one image URL is required (Images tab)');
     setErrors(errs);
     if (errs.length > 0) window.scrollTo({ top: 0, behavior: 'smooth' });
     return errs.length === 0;
@@ -221,12 +221,13 @@ export const AdminProductEditor: React.FC = () => {
     const toSave: ProductWithEmi = {
       ...form,
       slug,
+      originalPrice: form.originalPrice > 0 ? form.originalPrice : form.price,
       images: form.images.filter(i => i.trim()),
       highlights: form.highlights.filter(h => h.trim()),
       specifications: specs,
     };
     
-    // Sync to MongoDB backend
+    // Sync to MongoDB backend & Local Storage
     await syncProductToMongo(toSave as Product);
     refresh();
 

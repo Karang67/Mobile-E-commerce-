@@ -8,6 +8,7 @@ import { Order } from './models/Order.js';
 import { Product } from './models/Product.js';
 
 dotenv.config();
+dotenv.config({ path: '../.env' });
 
 const app = express();
 const PORT = process.env.PORT || 5000;
