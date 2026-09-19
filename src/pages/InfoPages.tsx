@@ -93,7 +93,7 @@ export const ContactPage: React.FC = () => {
             <Phone className="w-6 h-6" />
           </div>
           <h3 className="font-bold text-sm text-gray-900">Toll-Free Helpline</h3>
-          <p className="text-xs text-gray-600">+91 1800 123 4567</p>
+          <p className="text-xs text-gray-600">+91 7841976969</p>
           <p className="text-[11px] text-gray-400">9:00 AM - 9:00 PM (All Days)</p>
         </div>
 
@@ -102,7 +102,7 @@ export const ContactPage: React.FC = () => {
             <Mail className="w-6 h-6" />
           </div>
           <h3 className="font-bold text-sm text-gray-900">Email Support</h3>
-          <p className="text-xs text-gray-600">support@shivangimobile.com</p>
+          <p className="text-xs text-gray-600">Boranavinod89@gmail.com</p>
           <p className="text-[11px] text-gray-400">Response within 2 hours</p>
         </div>
 
@@ -110,9 +110,9 @@ export const ContactPage: React.FC = () => {
           <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
             <MapPin className="w-6 h-6" />
           </div>
-          <h3 className="font-bold text-sm text-gray-900">Corporate Office</h3>
-          <p className="text-xs text-gray-600">Road No. 12, Banjara Hills</p>
-          <p className="text-[11px] text-gray-400">Hyderabad, Telangana 500034</p>
+          <h3 className="font-bold text-sm text-gray-900">Opp Nagraj Electronics</h3>
+          <p className="text-xs text-gray-600">Main Bazar</p>
+          <p className="text-[11px] text-gray-400">Sumerpur, Pali , Rajasthan 306902</p>
         </div>
       </div>
     </div>

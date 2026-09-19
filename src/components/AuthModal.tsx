@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  X, 
-  Mail, 
+import {
+  X,
+  Mail,
   User,
   Phone,
-  ShieldCheck, 
-  ArrowRight, 
-  CheckCircle2, 
-  AlertCircle, 
-  RefreshCw, 
-  Truck, 
+  ShieldCheck,
+  ArrowRight,
+  CheckCircle2,
+  AlertCircle,
+  RefreshCw,
+  Truck,
   Sparkles,
   Lock,
   UserPlus,
@@ -18,14 +18,14 @@ import {
 import { useAuth } from '../context/AuthContext';
 
 export const AuthModal: React.FC = () => {
-  const { 
-    isAuthModalOpen, 
-    closeAuthModal, 
-    authWarning, 
-    authMode, 
-    setAuthMode, 
-    sendOtp, 
-    verifyOtp 
+  const {
+    isAuthModalOpen,
+    closeAuthModal,
+    authWarning,
+    authMode,
+    setAuthMode,
+    sendOtp,
+    verifyOtp
   } = useAuth();
 
   const [step, setStep] = useState<'form' | 'otp'>('form');
@@ -147,7 +147,7 @@ export const AuthModal: React.FC = () => {
           if (fullName.trim()) p.fullName = fullName.trim();
           if (phone.trim()) p.phone = phone.trim();
           localStorage.setItem('shivangi_user_profile', JSON.stringify(p));
-        } catch {}
+        } catch { }
       }
     } else {
       setErrorMessage(res.message);
@@ -177,11 +177,10 @@ export const AuthModal: React.FC = () => {
                   setAuthMode('signup');
                   setErrorMessage(null);
                 }}
-                className={`flex-1 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  authMode === 'signup'
+                className={`flex-1 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${authMode === 'signup'
                     ? 'bg-white text-[#E30613] shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
-                }`}
+                  }`}
               >
                 <UserPlus className="w-3.5 h-3.5" />
                 <span>Create Account (Sign Up)</span>
@@ -193,11 +192,10 @@ export const AuthModal: React.FC = () => {
                   setAuthMode('signin');
                   setErrorMessage(null);
                 }}
-                className={`flex-1 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  authMode === 'signin'
+                className={`flex-1 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${authMode === 'signin'
                     ? 'bg-white text-[#E30613] shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
-                }`}
+                  }`}
               >
                 <LogIn className="w-3.5 h-3.5" />
                 <span>Sign In</span>
@@ -274,7 +272,7 @@ export const AuthModal: React.FC = () => {
                       type="tel"
                       value={phone}
                       onChange={e => setPhone(e.target.value)}
-                      placeholder="e.g. 9876543210"
+                      placeholder="e.g. 78419769690"
                       className="w-full bg-gray-50 border border-gray-300 rounded-xl pl-10 pr-4 py-2 text-xs text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-[#E30613]"
                     />
                   </div>

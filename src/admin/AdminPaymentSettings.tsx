@@ -1,15 +1,15 @@
 import React, { useState, useRef } from 'react';
-import { 
-  QrCode, 
-  Upload, 
-  Save, 
-  CheckCircle2, 
-  AlertCircle, 
-  Sparkles, 
-  Eye, 
-  ShieldCheck, 
-  Banknote, 
-  Copy, 
+import {
+  QrCode,
+  Upload,
+  Save,
+  CheckCircle2,
+  AlertCircle,
+  Sparkles,
+  Eye,
+  ShieldCheck,
+  Banknote,
+  Copy,
   Check,
   RefreshCw
 } from 'lucide-react';
@@ -98,7 +98,7 @@ export const AdminPaymentSettings: React.FC = () => {
             <h3 className="text-white font-bold text-sm flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-[#E30613]" /> Active Payment Methods
             </h3>
-            
+
             {/* Scanner Toggle */}
             <div className="flex items-center justify-between p-3.5 rounded-xl bg-gray-800/60 border border-gray-700/50">
               <div className="flex items-center gap-3">
@@ -157,7 +157,7 @@ export const AdminPaymentSettings: React.FC = () => {
                   type="text"
                   value={settings.upiId}
                   onChange={e => setSettings({ ...settings, upiId: e.target.value })}
-                  placeholder="e.g. shivangimobile@upi or 9876543210@paytm"
+                  placeholder="e.g. shivangimobile@upi or 78419769690@paytm"
                   className={`${inputCls} font-mono`}
                   required
                 />
