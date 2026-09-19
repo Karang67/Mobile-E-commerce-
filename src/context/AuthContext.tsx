@@ -214,7 +214,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           };
         }
 
-        return { success: false, message: 'Verification incomplete. Please try again.' };
+        if (result.status === 'missing_requirements') {
+          const missing = (result.missingFields || []).join(', ');
+          console.warn('[Clerk SignUp] Missing requirements:', result.missingFields, result.unverifiedFields);
+          return {
+            success: false,
+            message: missing
+              ? `Verification incomplete: Clerk requires missing field(s): ${missing}. In Clerk Dashboard, please disable or set these fields to optional.`
+              : 'Verification incomplete: Clerk requires additional profile fields. Please check Clerk Dashboard settings.',
+          };
+        }
+
+        return { success: false, message: `Verification status: ${result.status}. Please try again.` };
       } else {
         const result = await signIn!.attemptFirstFactor({ strategy: 'email_code', code: trimmedToken });
 
@@ -229,7 +240,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           };
         }
 
-        return { success: false, message: 'Verification incomplete. Please try again.' };
+        if (result.status === 'needs_second_factor') {
+          return { success: false, message: 'Second factor authentication is required.' };
+        }
+
+        return { success: false, message: `Sign in incomplete (status: ${result.status}). Please try again.` };
       }
     } catch (err: unknown) {
       if (isClerkError(err)) {
