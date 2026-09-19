@@ -136,6 +136,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log(`[Clerk Auth] User authenticated: ${userId}`);
   };
 
+const generateSecurePassword = (): string => {
+  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+  const digits = '23456789';
+  const symbols = '!@#$%^&*()_+~';
+  let pwd = '';
+  pwd += letters[Math.floor(Math.random() * 24)];
+  pwd += letters[24 + Math.floor(Math.random() * 24)];
+  pwd += digits[Math.floor(Math.random() * digits.length)];
+  pwd += symbols[Math.floor(Math.random() * symbols.length)];
+  const all = letters + digits + symbols;
+  for (let i = 0; i < 16; i++) {
+    pwd += all[Math.floor(Math.random() * all.length)];
+  }
+  return pwd;
+};
+
   /**
    * Send email OTP via Clerk.
    * Routes to signUp (new user) or signIn (existing user) based on authMode.
@@ -150,7 +166,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (authMode === 'signup') {
         // Create sign-up and send email verification OTP
-        await signUp!.create({ emailAddress: normalizedEmail });
+        // Try creating with a generated password to satisfy Clerk instances requiring password
+        try {
+          await signUp!.create({
+            emailAddress: normalizedEmail,
+            password: generateSecurePassword(),
+          });
+        } catch {
+          await signUp!.create({ emailAddress: normalizedEmail });
+        }
         await signUp!.prepareEmailAddressVerification({ strategy: 'email_code' });
       } else {
         // Send sign-in email OTP
@@ -201,7 +225,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       if (authMode === 'signup') {
-        const result = await signUp!.attemptEmailAddressVerification({ code: trimmedToken });
+        let result = await signUp!.attemptEmailAddressVerification({ code: trimmedToken });
+
+        // If Clerk reported missing_requirements (e.g. password, first_name), auto-fulfill them
+        if (result.status === 'missing_requirements' && result.missingFields && result.missingFields.length > 0) {
+          const updatePayload: { password?: string; firstName?: string; lastName?: string } = {};
+          if (result.missingFields.includes('password')) {
+            updatePayload.password = generateSecurePassword();
+          }
+          if (result.missingFields.includes('first_name')) {
+            updatePayload.firstName = 'Customer';
+          }
+          if (result.missingFields.includes('last_name')) {
+            updatePayload.lastName = 'User';
+          }
+          if (Object.keys(updatePayload).length > 0) {
+            try {
+              result = await signUp!.update(updatePayload);
+            } catch (updateErr) {
+              console.warn('[Clerk SignUp] Failed to auto-fill missing fields:', updateErr);
+            }
+          }
+        }
 
         if (result.status === 'complete') {
           await setSignUpActive!({ session: result.createdSessionId! });
