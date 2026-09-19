@@ -362,7 +362,7 @@ export const CheckoutPage: React.FC = () => {
                     <div>
                       <span className="font-bold text-sm block">⚠️ Account Login Required to Order</span>
                       <p className="text-amber-800 text-[11px] mt-0.5 leading-relaxed">
-                        Please verify your email via Supabase Email OTP to proceed with checkout and live package tracking.
+                        Please verify your email via Clerk Email OTP to proceed with checkout and live package tracking.
                       </p>
                     </div>
                   </div>

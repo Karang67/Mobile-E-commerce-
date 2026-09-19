@@ -48,8 +48,7 @@ This project is separated into a standalone **Backend (MVC architecture on Rende
    - **Install Command:** `npm install`
 5. Add **Environment Variables** (under *Environment Variables* tab):
    - `VITE_API_URL`: `https://shivangi-mobile-api.onrender.com/api` (Replace with your actual Render backend URL)
-   - `VITE_SUPABASE_URL`: `https://xayybzdkcxtkrvurknod.supabase.co`
-   - `VITE_SUPABASE_ANON_KEY`: `sb_publishable_OLatXlg68t7Vd07PFJbvlQ_KhLURIRP`
+   - `VITE_CLERK_PUBLISHABLE_KEY`: Your Clerk Publishable Key from [clerk.com](https://clerk.com) Dashboard → API Keys
    - `VITE_CLOUDINARY_CLOUD_NAME`: `corwtx6y`
    - `VITE_CLOUDINARY_UPLOAD_PRESET`: `shivangi_preset`
 6. Click **Deploy**.

@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { ClerkProvider } from '@clerk/clerk-react';
 import { ToastProvider } from './context/ToastContext';
 import { BrandProvider } from './context/BrandContext';
 import { CartProvider } from './context/CartContext';
@@ -13,6 +14,8 @@ import { MobileBottomNav } from './components/MobileBottomNav';
 import { Footer } from './components/Footer';
 import { WhatsAppButton } from './components/WhatsAppButton';
 import { AuthModal } from './components/AuthModal';
+
+const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string;
 
 import { HomePage } from './pages/HomePage';
 import { ProductListingPage } from './pages/ProductListingPage';
@@ -86,69 +89,71 @@ const AdminApp: React.FC = () => (
 );
 // Storefront wrapper
 const StorefrontApp: React.FC = () => (
-  <BrandProvider>
-    <StoreDataProvider>
-      <ToastProvider>
-        <AuthProvider>
-          <CartProvider>
-            <WishlistProvider>
-              <CompareProvider>
-                <div className="min-h-screen flex flex-col bg-[#F8F8F8] text-[#202020] font-sans antialiased pb-16 lg:pb-0">
-                  <ScrollToTop />
-                
-                {/* Sticky Header (Desktop & Mobile) */}
-                <Header />
+  <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
+    <BrandProvider>
+      <StoreDataProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <CartProvider>
+              <WishlistProvider>
+                <CompareProvider>
+                  <div className="min-h-screen flex flex-col bg-[#F8F8F8] text-[#202020] font-sans antialiased pb-16 lg:pb-0">
+                    <ScrollToTop />
 
-                {/* Main Route Content */}
-                <main className="flex-1">
-                  <Routes>
-                    <Route path="/" element={<HomePage />} />
-                    <Route path="/shop" element={<ProductListingPage />} />
-                    <Route path="/shop/:category" element={<ProductListingPage />} />
-                    <Route path="/brand/:brand" element={<ProductListingPage />} />
-                    <Route path="/product/:slug" element={<ProductDetailPage />} />
-                    <Route path="/stores" element={<StoresPage />} />
-                    <Route path="/cart" element={<CartPage />} />
-                    <Route path="/checkout" element={<CheckoutPage />} />
-                    <Route path="/search" element={<SearchPage />} />
-                    <Route path="/wishlist" element={<WishlistPage />} />
-                    <Route path="/compare" element={<ComparePage />} />
-                    <Route path="/offers" element={<OffersPage />} />
-                    <Route path="/second-hand" element={<SecondHandPage />} />
-                    <Route path="/pre-owned" element={<Navigate to="/second-hand" replace />} />
-                    <Route path="/account" element={<AccountPage />} />
-                    <Route path="/login" element={<AccountPage />} />
-                    <Route path="/register" element={<AccountPage />} />
-                    <Route path="/about" element={<AboutPage />} />
-                    <Route path="/contact" element={<ContactPage />} />
-                    <Route path="/shipping" element={<ShippingPage />} />
-                    <Route path="/payment-methods" element={<PaymentMethodsPage />} />
-                    <Route path="/terms" element={<TermsPage />} />
-                    <Route path="/privacy" element={<PrivacyPage />} />
-                    {/* Fallback to Home */}
-                    <Route path="*" element={<HomePage />} />
-                  </Routes>
-                </main>
+                    {/* Sticky Header (Desktop & Mobile) */}
+                    <Header />
 
-                {/* Floating WhatsApp Button */}
-                <WhatsAppButton />
+                    {/* Main Route Content */}
+                    <main className="flex-1">
+                      <Routes>
+                        <Route path="/" element={<HomePage />} />
+                        <Route path="/shop" element={<ProductListingPage />} />
+                        <Route path="/shop/:category" element={<ProductListingPage />} />
+                        <Route path="/brand/:brand" element={<ProductListingPage />} />
+                        <Route path="/product/:slug" element={<ProductDetailPage />} />
+                        <Route path="/stores" element={<StoresPage />} />
+                        <Route path="/cart" element={<CartPage />} />
+                        <Route path="/checkout" element={<CheckoutPage />} />
+                        <Route path="/search" element={<SearchPage />} />
+                        <Route path="/wishlist" element={<WishlistPage />} />
+                        <Route path="/compare" element={<ComparePage />} />
+                        <Route path="/offers" element={<OffersPage />} />
+                        <Route path="/second-hand" element={<SecondHandPage />} />
+                        <Route path="/pre-owned" element={<Navigate to="/second-hand" replace />} />
+                        <Route path="/account" element={<AccountPage />} />
+                        <Route path="/login" element={<AccountPage />} />
+                        <Route path="/register" element={<AccountPage />} />
+                        <Route path="/about" element={<AboutPage />} />
+                        <Route path="/contact" element={<ContactPage />} />
+                        <Route path="/shipping" element={<ShippingPage />} />
+                        <Route path="/payment-methods" element={<PaymentMethodsPage />} />
+                        <Route path="/terms" element={<TermsPage />} />
+                        <Route path="/privacy" element={<PrivacyPage />} />
+                        {/* Fallback to Home */}
+                        <Route path="*" element={<HomePage />} />
+                      </Routes>
+                    </main>
 
-                {/* Dark Navy Footer */}
-                <Footer />
+                    {/* Floating WhatsApp Button */}
+                    <WhatsAppButton />
 
-                {/* Fixed Mobile Bottom Navigation (5 tabs) */}
-                <MobileBottomNav />
+                    {/* Dark Navy Footer */}
+                    <Footer />
 
-                {/* Supabase Email OTP Auth Modal */}
-                <AuthModal />
-              </div>
-            </CompareProvider>
-          </WishlistProvider>
-        </CartProvider>
-      </AuthProvider>
-    </ToastProvider>
-  </StoreDataProvider>
-</BrandProvider>
+                    {/* Fixed Mobile Bottom Navigation (5 tabs) */}
+                    <MobileBottomNav />
+
+                    {/* Clerk Email OTP Auth Modal */}
+                    <AuthModal />
+                  </div>
+                </CompareProvider>
+              </WishlistProvider>
+            </CartProvider>
+          </AuthProvider>
+        </ToastProvider>
+      </StoreDataProvider>
+    </BrandProvider>
+  </ClerkProvider>
 );
 
 export const App: React.FC = () => {

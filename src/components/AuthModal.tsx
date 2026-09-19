@@ -214,7 +214,7 @@ export const AuthModal: React.FC = () => {
               </h2>
               <p className="text-xs text-gray-500 max-w-xs mx-auto">
                 {authMode === 'signup'
-                  ? 'Register with your email to receive a 6-digit OTP code (Supabase Auth)'
+                  ? 'Register with your email to receive a 6-digit OTP code (Clerk Auth)'
                   : 'Enter your registered email to receive your sign-in OTP code'}
               </p>
             </div>
@@ -308,7 +308,7 @@ export const AuthModal: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>Secure 6-digit passwordless Supabase OTP verification</span>
+                  <span>Secure 6-digit passwordless Clerk OTP verification</span>
                 </div>
               </div>
 
@@ -382,7 +382,7 @@ export const AuthModal: React.FC = () => {
               </p>
             </div>
 
-            {/* Demo OTP Banner (When real Supabase credentials are not yet set in .env) */}
+            {/* Demo OTP Banner (only shown if demoCode state is set — not used with Clerk) */}
             {demoCode && (
               <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-900 animate-fade-in">
                 <div className="flex items-center gap-1.5 font-bold mb-0.5">

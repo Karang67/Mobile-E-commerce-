@@ -179,7 +179,7 @@ export const Header: React.FC = () => {
                 type="button"
                 onClick={() => openAuthModal()}
                 className="flex items-center gap-1.5 bg-white text-[#E30613] hover:bg-red-50 px-3.5 py-1.5 rounded-full transition-all text-xs font-black shadow-sm cursor-pointer"
-                title="Sign In / Register with Supabase Email OTP"
+                title="Sign In / Register with Clerk Email OTP"
               >
                 <User className="w-4 h-4" />
                 <span>Sign In / Sign Up</span>

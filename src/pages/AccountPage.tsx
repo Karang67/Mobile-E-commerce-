@@ -219,7 +219,7 @@ export const AccountPage: React.FC = () => {
             <div className="space-y-2.5 max-w-xl">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-500/20 border border-red-500/40 text-red-300 rounded-full text-xs font-black uppercase tracking-wider">
                 <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-                <span>Supabase Email OTP Authentication</span>
+                <span>Clerk Email OTP Authentication</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
                 Sign In or Create Your Account
