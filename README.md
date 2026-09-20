@@ -17,7 +17,7 @@ A complete, production-quality, responsive e-commerce web application inspired b
 
 ### 2. Global Navigation & Mobile Header
 - **Desktop Header**:
-  - Top utility bar with 90-min express delivery reminder, toll-free helpline (+91 1800 123 4567), store locator, and festive offers link
+  - Top utility bar with 90-min express delivery reminder, store hotline (+91 7841976969), store locator, and festive offers link
   - Main header with logo, live auto-suggest search bar, pincode indicator, compare badge, wishlist badge, cart count badge, and account link
   - Secondary navigation bar with **Shop By Brand** dropdown and category links (Smartphones, Tablets, Laptops, Smartwatches, Earbuds, Accessories, Offers, Stores)
 - **Mobile Sticky Header**:
@@ -64,7 +64,7 @@ Recreates the store locator screenshots:
 - Interactive **Leaflet OpenStreetMap** with custom red map markers
 - Search input: *"Search for Outlets here.."* by city, area, or name
 - State filter pills (Rajasthan)
-- Store listing cards for Sumerpur, Amalapuram, Anakapalli, Vijayawada, Visakhapatnam, Hyderabad, Rajahmundry, Guntur, Tirupati, and Chennai with direct Google Maps **Get Directions** links, phone, email, and store timings
+- Store listing cards for Sumerpur showroom with direct Google Maps **Get Directions** links, phone (+91 7841976969), email, and store timings
 
 ### 7. Cart & Multi-Step Checkout Flow
 - **Cart (`/cart`)**: Real-time quantity stepper, item removal, move to wishlist, subtotal calculations, and working coupon codes:

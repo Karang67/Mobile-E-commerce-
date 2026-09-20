@@ -61,6 +61,7 @@ export interface Product {
   qcScore?: string; // e.g. "32-Point Quality Inspected"
   deviceNotes?: string; // e.g. "Scratch-free screen, minor pocket wear on edge"
   relatedProductIds?: string[]; // IDs of products to show in Related Products section
+  emiPlans?: EmiPlan[];
 }
 
 export interface CartItem {

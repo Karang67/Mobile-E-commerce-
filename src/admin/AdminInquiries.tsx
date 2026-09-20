@@ -16,14 +16,11 @@ import {
   Package,
   Check,
   AlertCircle,
-  ArrowRight,
   ShieldCheck,
   CreditCard,
-  Send,
   QrCode,
   Image as ImageIcon,
   ExternalLink,
-  Copy,
   Loader2
 } from 'lucide-react';
 import {

@@ -32,7 +32,14 @@ const BankOffersSection: React.FC = () => {
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-white font-bold text-sm">Bank Offers</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-white font-bold text-sm">Bank Offers</h3>
+          {saved && (
+            <span className="flex items-center gap-1 text-emerald-400 text-xs font-semibold">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Saved!
+            </span>
+          )}
+        </div>
         <button onClick={() => setEditing(newOffer())} className="flex items-center gap-1.5 bg-[#E30613] hover:bg-[#c40510] text-white px-3 py-1.5 rounded-xl text-xs font-bold">
           <Plus className="w-3.5 h-3.5" /> Add Offer
         </button>
@@ -173,7 +180,7 @@ const HeroSlidesSection: React.FC = () => {
         </button>
       </div>
       <div className="space-y-2.5">
-        {slides.map((s, i) => (
+        {slides.map(s => (
           <div key={s.id} className="bg-gray-800/60 border border-gray-700 rounded-xl px-4 py-3 flex items-center gap-3">
             {s.image && <img src={s.image} alt={s.title} className="w-14 h-10 rounded-lg object-cover bg-gray-700 shrink-0" />}
             <div className="flex-1">

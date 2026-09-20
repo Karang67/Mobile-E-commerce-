@@ -77,7 +77,7 @@ export const AdminProductList: React.FC = () => {
     else { setSortKey(key); setSortAsc(true); }
   };
 
-  const SortIcon = ({ k }: { k: SortKey }) =>
+  const renderSortIcon = (k: SortKey) =>
     sortKey === k ? (sortAsc ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />) : null;
 
   const confirmDelete = async (id: string) => {
@@ -97,7 +97,11 @@ export const AdminProductList: React.FC = () => {
   const toggleSelect = (id: string) => {
     setSelected(prev => {
       const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
+      if (n.has(id)) {
+        n.delete(id);
+      } else {
+        n.add(id);
+      }
       return n;
     });
   };
@@ -243,14 +247,14 @@ export const AdminProductList: React.FC = () => {
                 </th>
                 <th className="px-4 py-3 text-left text-gray-400 font-semibold">Image</th>
                 <th className="px-4 py-3 text-left cursor-pointer text-gray-400 font-semibold" onClick={() => toggleSort('name')}>
-                  <span className="flex items-center gap-1">Name <SortIcon k="name" /></span>
+                  <span className="flex items-center gap-1">Name {renderSortIcon('name')}</span>
                 </th>
                 <th className="px-4 py-3 text-left text-gray-400 font-semibold">Category</th>
                 <th className="px-4 py-3 text-right cursor-pointer text-gray-400 font-semibold" onClick={() => toggleSort('price')}>
-                  <span className="flex items-center justify-end gap-1">Price <SortIcon k="price" /></span>
+                  <span className="flex items-center justify-end gap-1">Price {renderSortIcon('price')}</span>
                 </th>
                 <th className="px-4 py-3 text-center cursor-pointer text-gray-400 font-semibold" onClick={() => toggleSort('discount')}>
-                  <span className="flex items-center justify-center gap-1">Disc. <SortIcon k="discount" /></span>
+                  <span className="flex items-center justify-center gap-1">Disc. {renderSortIcon('discount')}</span>
                 </th>
                 <th className="px-4 py-3 text-center text-gray-400 font-semibold">Stock</th>
                 <th className="px-4 py-3 text-center text-gray-400 font-semibold">Flags</th>

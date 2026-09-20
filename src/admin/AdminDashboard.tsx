@@ -19,6 +19,27 @@ import {
 import { useStoreData } from '../context/StoreDataContext';
 import { getAdminNotifications, AdminInquiryNotification } from '../utils/notificationService';
 
+interface StatCardProps {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: number | string;
+  sub?: string;
+  color: string;
+}
+
+const StatCard: React.FC<StatCardProps> = ({ icon: Icon, label, value, sub, color }) => (
+  <div className="bg-[#1B2430] rounded-2xl p-5 border border-gray-700/40 flex items-start gap-4">
+    <div className={`w-11 h-11 rounded-xl ${color} flex items-center justify-center shrink-0`}>
+      <Icon className="w-5 h-5 text-white" />
+    </div>
+    <div>
+      <div className="text-2xl font-black text-white">{value}</div>
+      <div className="text-xs font-semibold text-gray-400 mt-0.5">{label}</div>
+      {sub && <div className="text-[11px] text-gray-500 mt-0.5">{sub}</div>}
+    </div>
+  </div>
+);
+
 export const AdminDashboard: React.FC = () => {
   const { products } = useStoreData();
   const inquiries = useMemo(() => getAdminNotifications(), []);
@@ -57,19 +78,6 @@ export const AdminDashboard: React.FC = () => {
     powerbanks: 'bg-teal-500',
     speakers: 'bg-indigo-500',
   };
-
-  const StatCard = ({ icon: Icon, label, value, sub, color }: { icon: any; label: string; value: number | string; sub?: string; color: string }) => (
-    <div className="bg-[#1B2430] rounded-2xl p-5 border border-gray-700/40 flex items-start gap-4">
-      <div className={`w-11 h-11 rounded-xl ${color} flex items-center justify-center shrink-0`}>
-        <Icon className="w-5 h-5 text-white" />
-      </div>
-      <div>
-        <div className="text-2xl font-black text-white">{value}</div>
-        <div className="text-xs font-semibold text-gray-400 mt-0.5">{label}</div>
-        {sub && <div className="text-[11px] text-gray-500 mt-0.5">{sub}</div>}
-      </div>
-    </div>
-  );
 
   return (
     <div className="space-y-6 max-w-6xl">

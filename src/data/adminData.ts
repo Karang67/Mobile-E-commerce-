@@ -29,7 +29,7 @@ export function loadStore(): Store {
     const raw = localStorage.getItem(KEYS.store);
     if (raw) {
       const parsed = JSON.parse(raw) as Store;
-      if (parsed && parsed.city && parsed.city.toLowerCase() !== 'Sumerpur') return parsed;
+      if (parsed && parsed.city && parsed.city.toLowerCase() !== 'adoni') return parsed;
     }
   } catch { /* ignore */ }
   return { ...demoStores[0] };

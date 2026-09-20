@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { MessageCircle, X } from 'lucide-react';
 import { useBrand } from '../context/BrandContext';
 
 export const WhatsAppButton: React.FC = () => {
@@ -15,10 +14,11 @@ export const WhatsAppButton: React.FC = () => {
     <div className="fixed bottom-20 lg:bottom-6 left-4 lg:left-6 z-30 flex items-center gap-2">
       {/* Floating Action Button */}
       <button
+        type="button"
         onClick={handleClick}
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
-        className="w-13 h-13 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-xl flex items-center justify-center transition-all duration-300 transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-4 focus:ring-green-400/40"
+        className="w-14 h-14 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-xl flex items-center justify-center transition-all duration-300 transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-4 focus:ring-green-400/40"
         aria-label="Chat on WhatsApp"
         title="Chat on WhatsApp with our store support"
       >
@@ -34,7 +34,7 @@ export const WhatsAppButton: React.FC = () => {
       </button>
 
       {/* Tooltip on Desktop */}
-      <div className="hidden md:flex items-center bg-gray-900 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-lg border border-gray-700 pointer-events-none">
+      <div className={`hidden md:flex items-center bg-gray-900 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-lg border border-gray-700 pointer-events-none transition-all duration-200 ${showTooltip ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2'}`}>
         <span>Chat with Us!</span>
       </div>
     </div>

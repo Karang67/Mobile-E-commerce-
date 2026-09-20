@@ -3,8 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   Save, ArrowLeft, Plus, Trash2,
   AlertCircle, CheckCircle2, Upload,
-  Image as ImageIcon, Sparkles, ShieldCheck,
-  BatteryCharging, Check, Star, RefreshCw
+  Image as ImageIcon, ShieldCheck,
+  BatteryCharging, Check, RefreshCw
 } from 'lucide-react';
 import { useStoreData } from '../context/StoreDataContext';
 import { useToast } from '../context/ToastContext';
@@ -81,9 +81,10 @@ const SmallToggle: React.FC<{ value: boolean; onChange: (v: boolean) => void; co
 export const AdminProductEditor: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const isNew = !id || id === 'new';
   const { products, categories, refresh } = useStoreData();
   const { showToast } = useToast();
+
+  const isNew = !id || id === 'new';
 
   const [activeTab, setActiveTab] = useState<Tab>('Basic');
   const [saved, setSaved] = useState(false);
@@ -129,7 +130,12 @@ export const AdminProductEditor: React.FC = () => {
     relatedProductIds: [],
   });
 
-  const [form, setForm] = useState<ProductWithEmi>(defaultForm());
+  const [form, setForm] = useState<ProductWithEmi>(defaultForm);
+
+  // Specs as separate state to allow key-value editing
+  const [specRows, setSpecRows] = useState<Array<{ key: string; value: string }>>(() =>
+    Object.entries(form.specifications || {}).map(([key, value]) => ({ key, value }))
+  );
 
   const allCategoryOptions = React.useMemo(() => {
     const list = [...categories];
@@ -214,11 +220,6 @@ export const AdminProductEditor: React.FC = () => {
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
-
-  // Specs as separate state to allow key-value editing
-  const [specRows, setSpecRows] = useState<Array<{ key: string; value: string }>>(() =>
-    Object.entries(form.specifications || {}).map(([key, value]) => ({ key, value }))
-  );
 
   const setField = <K extends keyof ProductWithEmi>(key: K, value: ProductWithEmi[K]) =>
     setForm(f => ({ ...f, [key]: value }));

@@ -10,8 +10,7 @@ import {
   ShieldCheck,
   Banknote,
   Copy,
-  Check,
-  RefreshCw
+  Check
 } from 'lucide-react';
 import { loadPaymentSettings, savePaymentSettings } from '../data/adminData';
 import { PaymentSettings } from '../types';
@@ -157,7 +156,7 @@ export const AdminPaymentSettings: React.FC = () => {
                   type="text"
                   value={settings.upiId}
                   onChange={e => setSettings({ ...settings, upiId: e.target.value })}
-                  placeholder="e.g. shivangimobile@upi or 78419769690@paytm"
+                  placeholder="e.g. shivangimobile@upi or 7841976969@paytm"
                   className={`${inputCls} font-mono`}
                   required
                 />

@@ -988,7 +988,7 @@ export const AccountPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                   <a
-                    href="tel:78419769690"
+                    href="tel:7841976969"
                     className="bg-white p-3 rounded-xl border border-gray-200 hover:border-[#E30613] transition-colors flex items-center gap-3"
                   >
                     <div className="w-8 h-8 rounded-lg bg-red-50 text-[#E30613] flex items-center justify-center">
@@ -996,12 +996,12 @@ export const AccountPage: React.FC = () => {
                     </div>
                     <div>
                       <span className="text-[10px] text-gray-400 font-bold uppercase block">Customer Hotline</span>
-                      <span className="font-bold text-gray-900 font-mono">+91 78419769690</span>
+                      <span className="font-bold text-gray-900 font-mono">+91 7841976969</span>
                     </div>
                   </a>
 
                   <a
-                    href="https://wa.me/9178419769690?text=Hi%20Shivangi%20Mobile,%20I%20need%20assistance"
+                    href="https://wa.me/917841976969?text=Hi%20Shivangi%20Mobile,%20I%20need%20assistance"
                     target="_blank"
                     rel="noreferrer"
                     className="bg-white p-3 rounded-xl border border-gray-200 hover:border-emerald-500 transition-colors flex items-center gap-3"

@@ -50,11 +50,12 @@ app.use(
 app.disable('x-powered-by');
 
 // ─── SEC-007: Strict CORS Origin Allowlist ────────────────────────────────────
-// Only exact-match origins are permitted. No wildcard patterns, no substrings.
+const configuredFrontend = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/+$/, '') : null;
 const allowedOrigins = new Set(
   [
-    process.env.FRONTEND_URL,        // Production: https://shivangi-mobile.vercel.app
+    configuredFrontend,              // Production: https://shivangi-mobile.vercel.app
     'http://localhost:5173',         // Vite dev server
+    'http://localhost:5174',
     'http://localhost:3000',         // Alt dev port
     'http://127.0.0.1:5173',
   ].filter(Boolean)
@@ -63,11 +64,16 @@ const allowedOrigins = new Set(
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (Postman, health checks, server-to-server)
-      if (!origin) return callback(null, false);
-      if (allowedOrigins.has(origin)) return callback(null, true);
-      // Block all other origins — do NOT silently allow
-      callback(new Error(`CORS: Origin '${origin}' is not permitted.`));
+      // Allow requests with no origin (Postman, mobile apps, health checks, server-to-server)
+      if (!origin) return callback(null, true);
+      const normalizedOrigin = origin.replace(/\/+$/, '');
+      if (allowedOrigins.has(normalizedOrigin)) return callback(null, true);
+      // In development, allow any localhost origin
+      if (process.env.NODE_ENV !== 'production' && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+        return callback(null, true);
+      }
+      // Block all other origins cleanly without throwing uncaught 500 error
+      callback(null, false);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],

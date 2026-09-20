@@ -6,6 +6,15 @@ const ProductVariantSchema = new mongoose.Schema({
   slug: { type: String },
 }, { _id: false });
 
+const EmiPlanSchema = new mongoose.Schema({
+  bank: { type: String, required: true },
+  tenureMonths: { type: Number, required: true },
+  interestRate: { type: Number, default: 0 },
+  monthlyEmi: { type: Number, required: true },
+  totalCost: { type: Number, required: true },
+  isNoCost: { type: Boolean, default: false },
+}, { _id: false });
+
 const ProductSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
   slug: { type: String, required: true },
@@ -41,7 +50,7 @@ const ProductSchema = new mongoose.Schema({
   isSecondHand: { type: Boolean, default: false },
   condition: { 
     type: String, 
-    enum: ['Like New', 'Superb', 'Good', 'Fair'] 
+    enum: ['Like New', 'Superb', 'Good', 'Fair', ''] 
   },
   batteryHealth: { type: String },
   warrantyPeriod: { type: String },
@@ -49,6 +58,7 @@ const ProductSchema = new mongoose.Schema({
   qcScore: { type: String },
   deviceNotes: { type: String },
   relatedProductIds: [{ type: String }],
+  emiPlans: [EmiPlanSchema],
 }, {
   timestamps: true,
 });

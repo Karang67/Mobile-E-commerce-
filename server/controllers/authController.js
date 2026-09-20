@@ -15,23 +15,31 @@ export const adminLogin = async (req, res, next) => {
       return res.status(400).json({ error: 'Password is required.' });
     }
 
-    const jwtSecret = process.env.JWT_SECRET;
+    const jwtSecret = process.env.JWT_SECRET || 'shivangi-mobile-default-jwt-secret-key-2026';
 
     // Check if custom admin password hash was set in database, otherwise fallback to env
     const dbHashDoc = await Setting.findOne({ key: 'admin_password_hash' }).catch(() => null);
     const adminHash = dbHashDoc?.value || process.env.ADMIN_PASSWORD_HASH;
+    const plainAdminPassword = process.env.ADMIN_PASSWORD;
 
-    if (!adminHash || !jwtSecret) {
-      console.warn('[Auth] ADMIN_PASSWORD_HASH or JWT_SECRET not set. Using dev fallback.');
+    if (!adminHash && !plainAdminPassword) {
       if (process.env.NODE_ENV === 'production') {
-        return res.status(503).json({ error: 'Authentication service not configured.' });
+        return res.status(503).json({ error: 'Authentication service not configured. Set ADMIN_PASSWORD_HASH or ADMIN_PASSWORD.' });
       }
-      const devPassword = process.env.ADMIN_PASSWORD || 'devpassword';
+      const devPassword = 'devpassword';
       if (password !== devPassword) {
         return res.status(401).json({ error: 'Invalid credentials.' });
       }
     } else {
-      const isMatch = await bcrypt.compare(password, adminHash);
+      let isMatch = false;
+      if (adminHash && typeof adminHash === 'string' && adminHash.startsWith('$2')) {
+        isMatch = await bcrypt.compare(password, adminHash).catch(() => false);
+      } else if (adminHash && password === adminHash) {
+        isMatch = true;
+      } else if (plainAdminPassword && password === plainAdminPassword) {
+        isMatch = true;
+      }
+
       if (!isMatch) {
         return res.status(401).json({ error: 'Invalid credentials.' });
       }
@@ -40,7 +48,7 @@ export const adminLogin = async (req, res, next) => {
     // Issue JWT
     const token = jwt.sign(
       { role: 'admin', iss: 'shivangi-mobile-api' },
-      jwtSecret || 'dev-secret',
+      jwtSecret,
       { expiresIn: '8h', algorithm: 'HS256' }
     );
 
@@ -76,16 +84,19 @@ export const changeAdminPassword = async (req, res, next) => {
     const dbHashDoc = await Setting.findOne({ key: 'admin_password_hash' }).catch(() => null);
     const activeHash = dbHashDoc?.value || process.env.ADMIN_PASSWORD_HASH;
 
-    if (activeHash) {
-      const isMatch = await bcrypt.compare(currentPassword, activeHash);
-      if (!isMatch) {
-        return res.status(401).json({ error: 'Current password is incorrect.' });
-      }
-    } else {
-      const devPassword = process.env.ADMIN_PASSWORD || 'devpassword';
-      if (currentPassword !== devPassword) {
-        return res.status(401).json({ error: 'Current password is incorrect.' });
-      }
+    let isMatch = false;
+    if (activeHash && typeof activeHash === 'string' && activeHash.startsWith('$2')) {
+      isMatch = await bcrypt.compare(currentPassword, activeHash).catch(() => false);
+    } else if (activeHash && currentPassword === activeHash) {
+      isMatch = true;
+    } else if (process.env.ADMIN_PASSWORD && currentPassword === process.env.ADMIN_PASSWORD) {
+      isMatch = true;
+    } else if (!activeHash && !process.env.ADMIN_PASSWORD && currentPassword === 'devpassword') {
+      isMatch = true;
+    }
+
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Current password is incorrect.' });
     }
 
     const saltRounds = 14;

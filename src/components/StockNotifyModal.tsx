@@ -100,7 +100,7 @@ export const StockNotifyModal: React.FC<StockNotifyModalProps> = ({
                 type="tel"
                 value={phone}
                 onChange={e => setPhone(e.target.value)}
-                placeholder="+91 78419769690"
+                placeholder="+91 7841976969"
                 className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#E30613]"
               />
             </div>

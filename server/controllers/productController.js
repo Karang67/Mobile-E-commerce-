@@ -48,6 +48,25 @@ export const upsertProduct = async (req, res, next) => {
 };
 
 /**
+ * @desc    Get a single product by id or slug
+ * @route   GET /api/products/:id
+ */
+export const getProductById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const product = await Product.findOne({
+      $or: [{ id }, { slug: id }]
+    });
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found', id });
+    }
+    res.status(200).json(product);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * @desc    Delete a product by id
  * @route   DELETE /api/products/:id
  */
