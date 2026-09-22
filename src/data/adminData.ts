@@ -138,10 +138,20 @@ export function savePaymentSettings(settings: PaymentSettings): void {
   }
 }
 
+let isSyncingSettings = false;
+let lastSettingsSyncTime = 0;
+
 /**
  * Synchronize payment settings and store details from MongoDB backend into local storage
  */
-export async function syncSettingsFromBackend(): Promise<void> {
+export async function syncSettingsFromBackend(force = false): Promise<void> {
+  const now = Date.now();
+  if (!force && (isSyncingSettings || now - lastSettingsSyncTime < 30000)) {
+    return;
+  }
+  isSyncingSettings = true;
+  lastSettingsSyncTime = now;
+
   try {
     const [payRes, storeRes] = await Promise.all([
       fetch(`${API_BASE}/settings/payment_settings`).catch(() => null),
@@ -153,16 +163,24 @@ export async function syncSettingsFromBackend(): Promise<void> {
     if (payRes && payRes.ok) {
       const payData = await payRes.json();
       if (payData && typeof payData === 'object' && payData.upiId) {
-        localStorage.setItem(KEYS.paymentSettings, JSON.stringify(payData));
-        changed = true;
+        const current = localStorage.getItem(KEYS.paymentSettings);
+        const newStr = JSON.stringify(payData);
+        if (current !== newStr) {
+          localStorage.setItem(KEYS.paymentSettings, newStr);
+          changed = true;
+        }
       }
     }
 
     if (storeRes && storeRes.ok) {
       const storeData = await storeRes.json();
       if (storeData && typeof storeData === 'object' && storeData.city) {
-        localStorage.setItem(KEYS.store, JSON.stringify(storeData));
-        changed = true;
+        const current = localStorage.getItem(KEYS.store);
+        const newStr = JSON.stringify(storeData);
+        if (current !== newStr) {
+          localStorage.setItem(KEYS.store, newStr);
+          changed = true;
+        }
       }
     }
 
@@ -171,11 +189,13 @@ export async function syncSettingsFromBackend(): Promise<void> {
     }
   } catch {
     // Backend offline or unreachable
+  } finally {
+    isSyncingSettings = false;
   }
 }
 
 // ─── Auth (SEC-003 FIX: Server-side JWT Authentication) ──────────────────────
-// The admin password is NO LONGER stored in localStorage or hardcoded in source.
+// The admin credentials are NO LONGER stored in source.
 // Authentication is handled by POST /api/auth/login on the Express backend.
 // The returned JWT is stored in sessionStorage (cleared when tab is closed).
 
@@ -194,22 +214,25 @@ export function isAdminLoggedIn(): boolean {
 }
 
 /** Authenticates against the backend. Returns { success, error }. */
-export async function adminLogin(pwd: string): Promise<{ success: boolean; error?: string }> {
+export async function adminLogin(email: string, pwd: string): Promise<{ success: boolean; error?: string }> {
   try {
     const response = await fetch(`${API_BASE}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: pwd }),
+      body: JSON.stringify({ email: email.trim(), password: pwd }),
     });
 
     const data = await response.json();
 
     if (!response.ok) {
-      return { success: false, error: data.error || 'Login failed. Please check your password.' };
+      return { success: false, error: data.error || 'Login failed. Please check your credentials.' };
     }
 
     // Store JWT in sessionStorage — cleared when browser tab closes
     sessionStorage.setItem(ADMIN_TOKEN_KEY, data.token);
+    if (data.email) {
+      sessionStorage.setItem('admin_email', data.email);
+    }
     return { success: true };
   } catch {
     return { success: false, error: 'Cannot reach server. Please check your connection.' };

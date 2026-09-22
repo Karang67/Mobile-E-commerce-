@@ -10,6 +10,7 @@ interface Props {
 // which returns a JWT that is verified server-side on every subsequent request.
 // The hardcoded password 'vinod67@' and localStorage session flag are removed.
 export const AdminLogin: React.FC<Props> = ({ onSuccess }) => {
+  const [email, setEmail] = useState('karangehlot5686@gmail.com');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [error, setError] = useState('');
@@ -21,13 +22,13 @@ export const AdminLogin: React.FC<Props> = ({ onSuccess }) => {
     setError('');
     setLoading(true);
 
-    const result = await adminLogin(password);
+    const result = await adminLogin(email, password);
     setLoading(false);
 
     if (result.success) {
       onSuccess();
     } else {
-      setError(result.error || 'Login failed. Please check your password.');
+      setError(result.error || 'Login failed. Please check your credentials.');
       setShaking(true);
       setTimeout(() => setShaking(false), 600);
       setPassword('');
@@ -52,7 +53,22 @@ export const AdminLogin: React.FC<Props> = ({ onSuccess }) => {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="px-8 py-7 space-y-5">
+        <form onSubmit={handleSubmit} className="px-8 py-7 space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">
+              Admin Email ID
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => { setEmail(e.target.value); setError(''); }}
+              placeholder="karangehlot5686@gmail.com"
+              className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#E30613] focus:border-transparent"
+              required
+              disabled={loading}
+            />
+          </div>
+
           <div>
             <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">
               Admin Password

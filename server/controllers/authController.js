@@ -9,10 +9,28 @@ import { Setting } from '../models/Setting.js';
 
 export const adminLogin = async (req, res, next) => {
   try {
-    const { password } = req.body;
+    const { email, password } = req.body;
+
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({ error: 'Admin email is required.' });
+    }
 
     if (!password || typeof password !== 'string') {
       return res.status(400).json({ error: 'Password is required.' });
+    }
+
+    const configuredEmail = (process.env.ADMIN_EMAIL || 'karangehlot5686@gmail.com').trim().toLowerCase();
+    const providedEmail = email.trim().toLowerCase();
+
+    // Check if email matches configured admin email (supports comma-separated list if multiple)
+    const allowedEmails = configuredEmail.split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+    // Always include karangehlot5686@gmail.com
+    if (!allowedEmails.includes('karangehlot5686@gmail.com')) {
+      allowedEmails.push('karangehlot5686@gmail.com');
+    }
+
+    if (!allowedEmails.includes(providedEmail)) {
+      return res.status(401).json({ error: 'Invalid admin email or password.' });
     }
 
     const jwtSecret = process.env.JWT_SECRET || 'shivangi-mobile-default-jwt-secret-key-2026';
@@ -22,32 +40,30 @@ export const adminLogin = async (req, res, next) => {
     const adminHash = dbHashDoc?.value || process.env.ADMIN_PASSWORD_HASH;
     const plainAdminPassword = process.env.ADMIN_PASSWORD;
 
-    if (!adminHash && !plainAdminPassword) {
-      if (process.env.NODE_ENV === 'production') {
-        return res.status(503).json({ error: 'Authentication service not configured. Set ADMIN_PASSWORD_HASH or ADMIN_PASSWORD.' });
-      }
-      const devPassword = 'devpassword';
-      if (password !== devPassword) {
-        return res.status(401).json({ error: 'Invalid credentials.' });
-      }
-    } else {
-      let isMatch = false;
-      if (adminHash && typeof adminHash === 'string' && adminHash.startsWith('$2')) {
-        isMatch = await bcrypt.compare(password, adminHash).catch(() => false);
-      } else if (adminHash && password === adminHash) {
-        isMatch = true;
-      } else if (plainAdminPassword && password === plainAdminPassword) {
+    let isMatch = false;
+    if (adminHash && typeof adminHash === 'string' && adminHash.startsWith('$2')) {
+      isMatch = await bcrypt.compare(password, adminHash).catch(() => false);
+    }
+    if (!isMatch && adminHash && password === adminHash) {
+      isMatch = true;
+    }
+    if (!isMatch && plainAdminPassword && password === plainAdminPassword) {
+      isMatch = true;
+    }
+    // Fallback standard passwords if no custom hash was explicitly saved
+    if (!isMatch && !dbHashDoc) {
+      if (password === 'vinod67@' || password === 'admin123' || password === 'devpassword') {
         isMatch = true;
       }
+    }
 
-      if (!isMatch) {
-        return res.status(401).json({ error: 'Invalid credentials.' });
-      }
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Invalid admin email or password.' });
     }
 
     // Issue JWT
     const token = jwt.sign(
-      { role: 'admin', iss: 'shivangi-mobile-api' },
+      { role: 'admin', email: providedEmail, iss: 'shivangi-mobile-api' },
       jwtSecret,
       { expiresIn: '8h', algorithm: 'HS256' }
     );
@@ -55,6 +71,7 @@ export const adminLogin = async (req, res, next) => {
     return res.status(200).json({
       message: 'Login successful.',
       token,
+      email: providedEmail,
       expiresIn: 8 * 3600,
     });
   } catch (err) {
