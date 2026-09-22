@@ -9,10 +9,11 @@ import { Setting } from '../models/Setting.js';
 
 export const adminLogin = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    let { email, password } = req.body;
 
-    if (!email || typeof email !== 'string') {
-      return res.status(400).json({ error: 'Admin email is required.' });
+    // If client didn't supply email (e.g. cached frontend), default to karangehlot5686@gmail.com
+    if (!email || typeof email !== 'string' || !email.trim()) {
+      email = process.env.ADMIN_EMAIL || 'karangehlot5686@gmail.com';
     }
 
     if (!password || typeof password !== 'string') {
