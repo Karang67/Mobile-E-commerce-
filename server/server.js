@@ -29,6 +29,7 @@ connectDB();
 // ─── SEC-010: Security Headers (helmet) ──────────────────────────────────────
 app.use(
   helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
@@ -50,36 +51,49 @@ app.use(
 app.disable('x-powered-by');
 
 // ─── SEC-007: Strict CORS Origin Allowlist ────────────────────────────────────
-const configuredFrontend = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/+$/, '') : null;
-const allowedOrigins = new Set(
-  [
-    configuredFrontend,              // Production: https://shivangi-mobile.vercel.app
-    'http://localhost:5173',         // Vite dev server
-    'http://localhost:5174',
-    'http://localhost:3000',         // Alt dev port
-    'http://127.0.0.1:5173',
-  ].filter(Boolean)
-);
+const rawFrontendEnv = process.env.FRONTEND_URL || '';
+const configuredOrigins = rawFrontendEnv
+  .split(',')
+  .map(url => url.trim().replace(/\/+$/, ''))
+  .filter(Boolean);
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (Postman, mobile apps, health checks, server-to-server)
-      if (!origin) return callback(null, true);
-      const normalizedOrigin = origin.replace(/\/+$/, '');
-      if (allowedOrigins.has(normalizedOrigin)) return callback(null, true);
-      // In development, allow any localhost origin
-      if (process.env.NODE_ENV !== 'production' && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
-        return callback(null, true);
-      }
-      // Block all other origins cleanly without throwing uncaught 500 error
-      callback(null, false);
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-);
+const allowedOrigins = new Set([
+  ...configuredOrigins,
+  'https://shivangi-mobile.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174',
+]);
+
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true; // Allow non-browser requests (Postman, mobile apps, health checks)
+  const normalized = origin.replace(/\/+$/, '');
+  if (allowedOrigins.has(normalized)) return true;
+  // Allow any Vercel domain (production, preview branch URLs, commit hashes)
+  if (/^https:\/\/([a-zA-Z0-9_-]+\.)*vercel\.app$/.test(normalized)) return true;
+  // Allow localhost / 127.0.0.1 on any port
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return true;
+  return false;
+};
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (isAllowedOrigin(origin)) {
+      return callback(null, true);
+    }
+    console.warn(`[CORS Blocked] Origin: ${origin}`);
+    callback(null, false);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+};
+
+app.use(cors(corsOptions));
+// Enable preflight for all routes
+app.options('*', cors(corsOptions));
 
 // ─── Body Parsing ─────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '1mb' }));
@@ -160,6 +174,20 @@ app.use(errorHandler);
 app.listen(PORT, () => {
   console.log(`[Shivangi Mobile] Server running on port ${PORT} (${process.env.NODE_ENV || 'development'})`);
   console.log(`[Health check] http://localhost:${PORT}/api/health`);
+
+  // ─── Render Free Tier Keep-Alive Self-Ping (Every 14 minutes) ──────────────
+  const externalUrl = process.env.RENDER_EXTERNAL_URL;
+  if (externalUrl) {
+    const FOURTEEN_MINUTES = 14 * 60 * 1000;
+    setInterval(async () => {
+      try {
+        await fetch(`${externalUrl}/api/health`);
+        console.log('[Keep-Alive] Pinged health check successfully.');
+      } catch (err) {
+        console.warn('[Keep-Alive] Ping warning:', err?.message || err);
+      }
+    }, FOURTEEN_MINUTES);
+  }
 });
 
 export default app;
