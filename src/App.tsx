@@ -29,6 +29,7 @@ import { ComparePage } from './pages/ComparePage';
 import { OffersPage } from './pages/OffersPage';
 import { SecondHandPage } from './pages/SecondHandPage';
 import { AccountPage } from './pages/AccountPage';
+import InstallPWA from "./components/InstallPWA";
 import { 
   AboutPage, 
   ContactPage, 
@@ -133,6 +134,7 @@ const StorefrontApp: React.FC = () => (
                         <Route path="*" element={<HomePage />} />
                       </Routes>
                     </main>
+                    <InstallPWA />
 
                     {/* Floating WhatsApp Button */}
                     <WhatsAppButton />

@@ -18,7 +18,8 @@ import {
   ChevronRight, 
   ChevronDown, 
   Sparkles,
-  PhoneCall
+  PhoneCall,
+  Download
 } from 'lucide-react';
 import { useBrand } from '../context/BrandContext';
 import { useStoreData } from '../context/StoreDataContext';
@@ -296,6 +297,18 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({ isOpen, onClose })
               <Phone className="w-4 h-4 text-gray-400" />
               <span>Contact Support</span>
             </Link>
+
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                window.dispatchEvent(new CustomEvent('trigger_pwa_install'));
+              }}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-[#E30613] hover:bg-red-50 text-left transition-colors"
+            >
+              <Download className="w-4 h-4 text-[#E30613]" />
+              <span>Install Mobile App</span>
+            </button>
           </div>
         </div>
 

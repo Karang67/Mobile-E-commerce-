@@ -9,7 +9,8 @@ import {
   User, 
   Scale, 
   ChevronDown, 
-  X
+  X,
+  Download
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
@@ -304,6 +305,15 @@ export const Header: React.FC = () => {
                 <MapPin className="w-3.5 h-3.5 text-yellow-300" />
                 <span>Our Store</span>
               </Link>
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent('trigger_pwa_install'))}
+                className="inline-flex items-center gap-1 px-2.5 py-1 hover:bg-white/10 rounded-md text-[11px] uppercase tracking-wider font-bold whitespace-nowrap transition-colors text-yellow-300 cursor-pointer"
+                title="Install Progressive Web App"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Install App</span>
+              </button>
             </div>
           </div>
         </nav>
