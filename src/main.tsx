@@ -5,15 +5,20 @@ import './index.css';
 import { registerSW } from 'virtual:pwa-register';
 
 // Register Service Worker with automatic update reload support
-const updateSW = registerSW({
-  onNeedRefresh() {
-    console.log('[PWA] New version available, updating...');
-    updateSW(true);
-  },
-  onOfflineReady() {
-    console.log('[PWA] App is ready for offline browsing');
-  },
-});
+if ('serviceWorker' in navigator) {
+  let updateSW: ((reloadPage?: boolean) => Promise<void>) | undefined;
+  updateSW = registerSW({
+    onNeedRefresh() {
+      console.log('[PWA] New version available, updating...');
+      if (updateSW) {
+        updateSW(true);
+      }
+    },
+    onOfflineReady() {
+      console.log('[PWA] App is ready for offline browsing');
+    },
+  });
+}
 
 const rootElement = document.getElementById('root');
 
